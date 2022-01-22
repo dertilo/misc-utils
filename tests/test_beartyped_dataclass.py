@@ -9,7 +9,6 @@ from beartype.roar import BeartypeCallHintPepParamException
 from beartype.vale import IsAttr, IsEqual, Is
 from numpy import floating
 from numpy.typing import NDArray
-from pydantic import BaseModel, root_validator, ValidationError
 
 
 Numpy2DArray = Annotated[NDArray[floating], IsAttr["ndim", IsEqual[2]]]
@@ -47,17 +46,6 @@ def test_beartyped_field():
     assert error is not None
 
 
-class MustHaveSameLen(BaseModel):
-    text: str
-    ints: list[int]
-
-    @root_validator
-    def validate(cls, values):
-        have_same_len = len(values["text"]) == len(values["ints"])
-        assert have_same_len
-        return values
-
-
 @dataclass
 class MustHaveSameLenDataClass:
     text: str
@@ -70,13 +58,6 @@ class MustHaveSameLenDataClass:
         have_same_len = len(self.text) == len(self.ints)
         if not have_same_len:
             raise AssertionError("must have same lenght")
-
-
-def test_MustHaveSameLen():
-    try:
-        MustHaveSameLen(text="hello", ints=list(range(4)))
-    except ValidationError as e:
-        print(e)
 
 
 def test_MustHaveSameLenDataClass():

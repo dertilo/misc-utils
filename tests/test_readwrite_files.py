@@ -4,10 +4,6 @@ import shutil
 from pprint import pprint
 from typing import Optional, Any, Iterable, Callable
 
-from beartype import beartype
-from pytorch_lightning.utilities import flatten_dict
-import collections
-
 from data_io.readwrite_files import (
     read_jsonl,
     write_lines,
@@ -20,9 +16,7 @@ from misc_utils.utils import flatten_nested_dict, sanitize_hexappend_filename
 
 
 def test_reading_jsonl():
-    data = list(
-        read_jsonl("tests/resources/test.jsonl", limit=3, num_to_skip=2)
-    )
+    data = list(read_jsonl("tests/resources/test.jsonl", limit=3, num_to_skip=2))
     expected = [
         {"a": 1.2, "b": "foo-2", "k": 2},
         {"a": 1.2, "b": "foo-3", "k": 3},

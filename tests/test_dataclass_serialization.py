@@ -1,10 +1,10 @@
 import json
 from dataclasses import dataclass, field, fields
+from enum import Enum, auto
 from pprint import pprint
 from typing import Dict, List, Optional, Union, ClassVar, Iterator
 
 import pytest
-from omegaconf import OmegaConf
 
 from misc_utils.dataclass_utils import (
     serialize_dataclass,
@@ -13,7 +13,32 @@ from misc_utils.dataclass_utils import (
     encode_dataclass,
 )
 from misc_utils.utils import Singleton
-from text_processing.asr_text_normalization import Casing
+
+
+class Casing(str, Enum):
+    # TODO: copy pasted this, do I really needed for testing? or move tests to text_processing!
+    lower = auto()
+    upper = auto()
+    original = auto()
+
+    def _to_dict(self, skip_keys: Optional[list[str]] = None) -> dict:
+        obj = self
+        module = obj.__class__.__module__
+        _target_ = f"{module}.{obj.__class__.__name__}"
+        # TODO: WTF? why _target_ and _id_ stuff here?
+        d = {"_target_": _target_, "value": self.value, "_id_": str(id(self))}
+        skip_keys = skip_keys if skip_keys is not None else []
+        return {k: v for k, v in d.items() if k not in skip_keys}
+
+    def apply(self, s: str) -> str:
+        if self is Casing.upper:
+            return s.upper()
+        elif self is Casing.lower:
+            return s.lower()
+        elif self is Casing.original:
+            return s
+        else:
+            raise AssertionError
 
 
 @dataclass
