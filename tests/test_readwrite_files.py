@@ -21,7 +21,7 @@ from misc_utils.utils import flatten_nested_dict, sanitize_hexappend_filename
 
 def test_reading_jsonl():
     data = list(
-        read_jsonl("misc_utils/tests/resources/test.jsonl", limit=3, num_to_skip=2)
+        read_jsonl("tests/resources/test.jsonl", limit=3, num_to_skip=2)
     )
     expected = [
         {"a": 1.2, "b": "foo-2", "k": 2},
