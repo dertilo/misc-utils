@@ -19,7 +19,7 @@ from misc_utils.dataclass_utils import (
     encode_dataclass,
     all_undefined_must_be_filled,
 )
-from misc_utils.utils import Singleton
+from misc_utils.utils import Singleton, just_try
 
 
 @dataclass
@@ -202,6 +202,8 @@ class CachedData(Buildable, ABC):
 
 @dataclass
 class ContinuedCachedData(CachedData):
+    clean_on_fail: bool = dataclasses.field(default=False, repr=False)
+
     @property
     def _is_ready(self) -> bool:
         """
@@ -215,7 +217,9 @@ class ContinuedCachedData(CachedData):
 
     def _load_cached(self) -> None:
         print(f"continue in {self.cache_dir}")
-        self.continued_build_cache()
+        IT_FAILED = "<IT_FAILED>"
+        # just_try here might be too much care-taking?
+        just_try(lambda: self.continued_build_cache(), default=IT_FAILED, verbose=True)
 
     @abstractmethod
     def continued_build_cache(self) -> None:
