@@ -1,15 +1,15 @@
 from dataclasses import dataclass
 from typing import Any, Optional
 
-import dash
 import dash_core_components as dcc
 import dash_html_components as html
 from beartype import beartype
-from beartype.roar import BeartypeCallHintPepParamException
 from dash import Dash
 from dash.dependencies import Input, Output, State
 
-from misc_utils.dataclass_utils import serialize_dataclass, deserialize_dataclass
+from misc_utils.beartypes import bear_does_roar
+from misc_utils.dataclass_utils import serialize_dataclass, deserialize_dataclass, \
+    encode_dataclass
 from misc_utils.utils import just_try
 
 
@@ -26,8 +26,8 @@ class DashDataclasses(Dash):
             def serialize_deserialize_dataclasses_wrapper(*args, **kwargs):
                 bearified_fun = beartype(fun)
                 o = bearified_fun(
-                    *[deserialize(s) for s in args],
-                    **{k: deserialize(s) for k, s in kwargs.items()},
+                    *[just_try_deserialize_or_fallback(x) for x in args],
+                    **{k:just_try_deserialize_or_fallback(x) for k,x in kwargs.items()},
                 )
                 if isinstance(o, (list, tuple)):
                     o = [serialize_dataclass(dc) for dc in o]
@@ -56,28 +56,18 @@ app.layout = html.Div(
     ]
 )
 
-error = None
-try:
-    deserialize_dataclass(None)
-except BeartypeCallHintPepParamException as e:
-    error = e
-assert error is not None
-
+assert bear_does_roar(lambda : encode_dataclass(None))
 
 @dataclass
 class SimpleDataClass:
     count: int = 0
 
 
-def deserialize(x: Any):
-    if x is None:
-        return x
-    elif isinstance(x, str):
+def just_try_deserialize_or_fallback(x: Any):
+    if x is not None:
         return just_try(lambda: deserialize_dataclass(x), default=x)
     else:
-        print(f"deserialize: {type(x)=},{x=}")
-        return x
-
+        return None
 
 @app.callback_dataclassed(
     Output(component_id="my-output", component_property="children"),
