@@ -229,8 +229,17 @@ def to_dict(o) -> Dict:
 
 
 @beartype
-def deserialize_dataclass(s: NeStr) -> Dataclass:
-    o = json.loads(s, cls=Base64Decoder)
+def decode_dataclass(o: Union[dict,list,tuple]) -> Dataclass:
+    # TODO: there must be a better way than, json.dumps twice!
+    if not isinstance(o, str):
+        o = json.dumps(o)
+    o = json.loads(o, cls=Base64Decoder)
+    o = json.loads(json.dumps(o), cls=MyDecoder)
+    return o
+
+@beartype
+def deserialize_dataclass(o: NeStr) -> Dataclass:
+    o = json.loads(o, cls=Base64Decoder)
     o = json.loads(json.dumps(o), cls=MyDecoder)
     return o
 

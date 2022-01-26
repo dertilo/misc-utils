@@ -1,7 +1,8 @@
 import dataclasses
-from typing import Annotated, TypeVar
+from typing import Annotated, TypeVar, Callable
 
 import beartype
+from beartype.roar import BeartypeCallException
 from beartype.vale import IsAttr, IsEqual, Is
 from numpy import floating, int16, number
 from numpy.typing import NDArray
@@ -74,3 +75,11 @@ def bearify(obj, annotation):
         return o
 
     return check(obj)
+
+def bear_does_roar(roar_trigger_fun: Callable):
+    did_roar = False
+    try:
+        roar_trigger_fun()
+    except BeartypeCallException as e:
+        did_roar = True
+    return did_roar
