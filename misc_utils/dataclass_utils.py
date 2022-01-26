@@ -13,7 +13,7 @@ from beartype import beartype
 from omegaconf import OmegaConf, DictConfig
 
 from misc_utils.base64_utils import Base64Decoder
-from misc_utils.beartypes import Dataclass
+from misc_utils.beartypes import Dataclass, NeStr
 from misc_utils.utils import Singleton, just_try
 
 T = TypeVar("T")
@@ -229,7 +229,7 @@ def to_dict(o) -> Dict:
 
 
 @beartype
-def deserialize_dataclass(s: str) -> Dataclass:
+def deserialize_dataclass(s: NeStr) -> Dataclass:
     o = json.loads(s, cls=Base64Decoder)
     o = json.loads(json.dumps(o), cls=MyDecoder)
     return o

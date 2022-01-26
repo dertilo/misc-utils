@@ -1,4 +1,5 @@
 import collections
+import itertools
 import random
 import sys
 import traceback
@@ -187,3 +188,12 @@ def nest_flattened_dict(flattened: list[tuple[list[str], Any]]):
     for path, value in flattened:
         set_val_in_nested_dict(nested_dict, path, value)
     return nested_dict
+
+def collapse_sequence(input:Iterable, merge_fun:Callable, get_key_fun: Callable):
+    def collapse(g):
+        l = list(g)
+        key, _ = l[0]
+        assert len(set([c for c, d in l])) == 1
+        return key, merge_fun([x for _, x in l])
+
+    return list(collapse(g) for _, g in itertools.groupby(input, key=get_key_fun))

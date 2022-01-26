@@ -1,4 +1,7 @@
+import itertools
+import json
 from pprint import pprint
+from typing import Callable
 
 from misc_utils.utils import (
     just_try,
@@ -6,6 +9,7 @@ from misc_utils.utils import (
     sanitize_hexappend_filename,
     flatten_nested_dict,
     nest_flattened_dict,
+    collapse_sequence,
 )
 
 
@@ -55,3 +59,14 @@ def test_flatten_nested_dict():
     flattened_dict = flatten_nested_dict(expected)
     nested_dict = nest_flattened_dict(flattened_dict)
     assert nested_dict == expected, f"{nested_dict}!={expected}"
+
+
+def test_collapse_sequence():
+    input = [("a", 1), ("a", 1), ("b", 1), ("a", 1), ("c", 1), ("c", 1), ("c", 1)]
+    expected = [("a", 2), ("b", 1), ("a", 1), ("c", 3)]
+    collapsed = collapse_sequence(input, merge_fun=sum, get_key_fun=lambda x: x[0])
+    assert json.dumps(collapsed) == json.dumps(expected)
+
+
+if __name__ == "__main__":
+    test_collapse_sequence()
