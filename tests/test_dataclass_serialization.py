@@ -1,10 +1,10 @@
 import json
-from dataclasses import dataclass, field, fields
+from dataclasses import dataclass, field
 from enum import Enum, auto
-from pprint import pprint
-from typing import Dict, List, Optional, Union, ClassVar, Iterator
+from typing import Optional, Union, ClassVar, Callable
 
 import pytest
+from beartype.roar import BeartypeCallException
 
 from misc_utils.dataclass_utils import (
     serialize_dataclass,
@@ -13,6 +13,15 @@ from misc_utils.dataclass_utils import (
     encode_dataclass,
 )
 from misc_utils.utils import Singleton
+
+
+def bear_does_roar(roar_trigger_fun: Callable):
+    did_roar = False
+    try:
+        roar_trigger_fun()
+    except BeartypeCallException as e:
+        did_roar = True
+    return did_roar
 
 
 class Casing(str, Enum):
@@ -187,4 +196,25 @@ def test_deserialization_not_bothered_by_unknown_keys():
     d["unknown_key"] = "extra-data"
     s = json.dumps(d)
     o = deserialize_dataclass(s)
-    assert o == bar
+    assert o == bar, f"{o}"
+
+
+def test_decode_dataclass():
+    bar = Bar("foo", Casing.lower, "bar")
+    foo = Foo([bar])
+    d = encode_dataclass(foo)
+    dec = deserialize_dataclass(d)
+    assert isinstance(dec, Foo)
+    assert isinstance(dec.bars[0], Bar)
+
+    dec = deserialize_dataclass([d, d])
+    assert isinstance(dec, list)
+    assert all([isinstance(x, Foo) for x in dec])
+    assert all([isinstance(x.bars[0], Bar) for x in dec])
+    assert all([isinstance(x.bars[0].casing, Casing) for x in dec])
+
+
+def test_None():
+    assert deserialize_dataclass(None) is None
+    assert bear_does_roar(lambda: encode_dataclass(None))
+    assert bear_does_roar(lambda: serialize_dataclass(None))
