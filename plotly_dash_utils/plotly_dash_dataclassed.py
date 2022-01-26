@@ -1,9 +1,10 @@
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Optional
 
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
+from beartype import beartype
 from beartype.roar import BeartypeCallHintPepParamException
 from dash import Dash
 from dash.dependencies import Input, Output, State
@@ -23,7 +24,8 @@ class DashDataclasses(Dash):
 
         def some_decorator(fun):
             def serialize_deserialize_dataclasses_wrapper(*args, **kwargs):
-                o = fun(
+                bearified_fun = beartype(fun)
+                o = bearified_fun(
                     *[deserialize(s) for s in args],
                     **{k: deserialize(s) for k, s in kwargs.items()},
                 )
@@ -83,7 +85,9 @@ def deserialize(x: Any):
     Input(component_id="my-input", component_property="value"),
     State("my-state", "data"),
 )
-def update_output_div(input_value, state: SimpleDataClass):
+def update_output_div(
+    input_value, state: Optional[SimpleDataClass]
+) -> tuple[dict, SimpleDataClass]:
     print(f"{type(state)=}")
     if state is not None:
         count = state.count
