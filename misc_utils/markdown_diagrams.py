@@ -7,6 +7,7 @@ from typing import Union, Any, Optional, Iterator
 from beartype import beartype
 
 from data_io.readwrite_files import write_lines, write_file
+from misc_utils.beartypes import Dataclass
 from misc_utils.dataclass_utils import (
     MyCustomEncoder,
     serialize_dataclass,
@@ -105,14 +106,27 @@ def generate_mermaid_triples(
 def process_node_name(n):
     return n.replace("__main__.", "")
 
+def write_dataclass_to_mermaid(file:str,o:Dataclass):
+    flow_chart = mermaid_flowchart(o)
+    write_file(file, f"```mermaid\n\n{flow_chart}```")
 
-if __name__ == "__main__":
-    o = TestDataClass(data=AnotherTestDataClass())
-    d = encode_dataclass(o)
+
+def mermaid_flowchart(o:Dataclass,additional_skipkeys:Optional[list[str]]=None)->str:
+    skip_keys = ["cache_dir", "cache_base"]
+    if additional_skipkeys is not None:
+        skip_keys+=additional_skipkeys
+
+    d = encode_dataclass(o, skip_keys=skip_keys)
     edges = "\n".join(
         [
             f"{node_from} --> | {param_name} | {node_to}"
             for node_from, param_name, node_to in generate_mermaid_triples(d)
         ]
     )
-    write_file("diagram.md", f"```mermaid\n\nflowchart LR\n\n{edges}\n```")
+    flow_chart = f"flowchart LR\n\n{edges}\n"
+    return flow_chart
+
+
+if __name__ == "__main__":
+    o = TestDataClass(data=AnotherTestDataClass())
+
