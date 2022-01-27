@@ -261,7 +261,7 @@ def encode_dataclass(
     class_reference_key="_target_",
     skip_undefined=True,
     skip_keys: Optional[list[str]] = None,
-) -> dict:
+) -> Union[dict,list,tuple,set]:
     """
     encode in the sense that the dictionary representation can be decoded to the nested dataclasses object again
     """

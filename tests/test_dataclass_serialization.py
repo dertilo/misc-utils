@@ -191,6 +191,24 @@ def test_deserialization_not_bothered_by_unknown_keys():
     o = deserialize_dataclass(s)
     assert o == bar, f"{o}"
 
+def test_encode_nonencodable():
+    inp=[1,2]
+    assert encode_dataclass(inp)==inp
+    inp=("foo",)
+    assert encode_dataclass(inp)==inp
+    inp= {"bla":1.234}
+    assert encode_dataclass(inp)==inp
+
+def test_encode_container_of_dataclasses():
+    bar = Bar("foo", Casing.lower, "bar")
+    foo = Foo([bar])
+    d = encode_dataclass([foo,foo])
+    dec = decode_dataclass(d)
+    assert isinstance(dec, list)
+    assert all([isinstance(x, Foo) for x in dec])
+    assert all([isinstance(x.bars[0], Bar) for x in dec])
+    assert all([isinstance(x.bars[0].casing, Casing) for x in dec])
+
 def test_endecode__dataclass():
     bar = Bar("foo", Casing.lower, "bar")
     foo = Foo([bar])
@@ -220,3 +238,6 @@ def test_None():
     assert bear_does_roar(lambda: deserialize_dataclass(None))
     assert bear_does_roar(lambda: encode_dataclass(None))
     assert bear_does_roar(lambda: serialize_dataclass(None))
+
+if __name__ == '__main__':
+    test_encode_nonencodable()
