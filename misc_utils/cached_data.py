@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from hashlib import sha1
 from time import time
-from typing import ClassVar, Union, Any, Iterable, Iterator
+from typing import ClassVar, Union, Any, Iterable, Iterator, TypeVar, Optional
 
 from beartype import beartype
 
@@ -249,7 +249,13 @@ class ContinuedCachedDicts(ContinuedCachedData, Iterable[dict]):
         """
         raise NotImplementedError
 
+    @abstractmethod
+    def build_state_from_cached_data(self) -> None:
+        raise NotImplementedError
+
     def continued_build_cache(self) -> None:
+        self.build_state_from_cached_data()
+
         write_jsonl(
             self.jsonl_file,
             self.generate_dicts_to_cache(),
@@ -258,6 +264,28 @@ class ContinuedCachedDicts(ContinuedCachedData, Iterable[dict]):
 
     def __iter__(self) -> Iterator[dict]:
         yield from read_jsonl(self.jsonl_file)
+
+
+T = TypeVar("T")
+
+
+@dataclass
+class ContinuedCachedDataclasses(ContinuedCachedDicts):
+    @abstractmethod
+    def generate_dataclasses_to_cache(self) -> Iterator[T]:
+        """
+        in case of append_jsonl==True yield only new data here!
+        """
+        raise NotImplementedError
+
+    def generate_dicts_to_cache(self) -> Iterator[dict]:
+        """
+        in case of append_jsonl==True yield only new data here!
+        """
+        yield from (encode_dataclass(o) for o in self.generate_dataclasses_to_cache())
+
+    def __iter__(self) -> Iterator[T]:
+        yield from (deserialize_dataclass(s) for s in read_lines(self.jsonl_file))
 
 
 @dataclass
