@@ -6,11 +6,18 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from hashlib import sha1
 from time import time
-from typing import ClassVar, Union, Any
+from typing import ClassVar, Union, Any, Iterable, Iterator
 
 from beartype import beartype
 
-from data_io.readwrite_files import write_json, read_file, write_lines, read_lines
+from data_io.readwrite_files import (
+    write_json,
+    read_file,
+    write_lines,
+    read_lines,
+    read_jsonl,
+    write_jsonl,
+)
 from misc_utils.buildable import Buildable
 from misc_utils.dataclass_utils import (
     serialize_dataclass,
@@ -224,6 +231,33 @@ class ContinuedCachedData(CachedData):
     @abstractmethod
     def continued_build_cache(self) -> None:
         raise NotImplementedError
+
+
+@dataclass
+class ContinuedCachedDicts(ContinuedCachedData, Iterable[dict]):
+    append_jsonl: ClassVar[str] = True
+    jsonl_file_name: ClassVar[str] = "data.jsonl"
+
+    @property
+    def jsonl_file(self):
+        return self.prefix_cache_dir(self.jsonl_file_name)
+
+    @abstractmethod
+    def generate_dicts_to_cache(self) -> Iterator[dict]:
+        """
+        in case of append_jsonl==True yield only new data here!
+        """
+        raise NotImplementedError
+
+    def continued_build_cache(self) -> None:
+        write_jsonl(
+            self.jsonl_file,
+            self.generate_dicts_to_cache(),
+            mode="ab" if self.append_jsonl else "wb",
+        )
+
+    def __iter__(self) -> Iterator[dict]:
+        yield from read_jsonl(self.jsonl_file)
 
 
 @dataclass
