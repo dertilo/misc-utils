@@ -189,7 +189,8 @@ def nest_flattened_dict(flattened: list[tuple[list[str], Any]]):
         set_val_in_nested_dict(nested_dict, path, value)
     return nested_dict
 
-def collapse_sequence(input:Iterable, merge_fun:Callable, get_key_fun: Callable):
+
+def collapse_sequence(input: Iterable, merge_fun: Callable, get_key_fun: Callable):
     def collapse(g):
         l = list(g)
         key, _ = l[0]
@@ -197,3 +198,8 @@ def collapse_sequence(input:Iterable, merge_fun:Callable, get_key_fun: Callable)
         return key, merge_fun([x for _, x in l])
 
     return list(collapse(g) for _, g in itertools.groupby(input, key=get_key_fun))
+
+
+def count_many(d: dict, counters):
+    for k, v in d.items():
+        counters[k].update({v: 1})

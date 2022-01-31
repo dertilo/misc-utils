@@ -76,6 +76,7 @@ def bearify(obj, annotation):
 
     return check(obj)
 
+
 def bear_does_roar(roar_trigger_fun: Callable):
     did_roar = False
     try:

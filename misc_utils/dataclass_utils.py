@@ -193,18 +193,18 @@ class MyDecoder(json.JSONDecoder):
                     break
             else:
                 class_key = None
-            if class_key is not None:
-                if IDKEY in dct:
-                    eid = dct.pop(IDKEY)
-                else:
-                    eid = None
+            if class_key is not None and IDKEY in dct:
+                # if IDKEY in dct:
+                eid = dct.pop(IDKEY)
+                # else:
+                #     eid = None
 
                 if eid in object_registry.keys():
                     o = object_registry[eid]
                 else:
                     o = instantiate_via_importlib(dct, class_key)
-                    if eid is not None:
-                        object_registry[eid] = o
+                    # if eid is not None:
+                    object_registry[eid] = o
 
             else:
                 o = dct
@@ -229,13 +229,14 @@ def to_dict(o) -> Dict:
 
 
 @beartype
-def decode_dataclass(o: Union[dict,list,tuple]) -> Dataclass:
+def decode_dataclass(o: Union[dict, list, tuple]) -> Dataclass:
     # TODO: there must be a better way than, json.dumps twice!
     if not isinstance(o, str):
         o = json.dumps(o)
     o = json.loads(o, cls=Base64Decoder)
     o = json.loads(json.dumps(o), cls=MyDecoder)
     return o
+
 
 @beartype
 def deserialize_dataclass(o: NeStr) -> Dataclass:
@@ -261,7 +262,7 @@ def encode_dataclass(
     class_reference_key="_target_",
     skip_undefined=True,
     skip_keys: Optional[list[str]] = None,
-) -> Union[dict,list,tuple,set]:
+) -> Union[dict, list, tuple, set]:
     """
     encode in the sense that the dictionary representation can be decoded to the nested dataclasses object again
     """
