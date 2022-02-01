@@ -8,8 +8,11 @@ from dash import Dash
 from dash.dependencies import Input, Output, State
 
 from misc_utils.beartypes import bear_does_roar
-from misc_utils.dataclass_utils import serialize_dataclass, deserialize_dataclass, \
-    encode_dataclass
+from misc_utils.dataclass_utils import (
+    serialize_dataclass,
+    deserialize_dataclass,
+    encode_dataclass,
+)
 from misc_utils.utils import just_try
 from plotly_dash_utils.plotly_dash_dataclassed import DashDataclasses
 
@@ -27,12 +30,12 @@ app.layout = html.Div(
     ]
 )
 
-assert bear_does_roar(lambda : encode_dataclass(None))
+assert bear_does_roar(lambda: encode_dataclass(None))
+
 
 @dataclass
 class SimpleDataClass:
     count: int = 0
-
 
 
 @app.callback_dataclassed(

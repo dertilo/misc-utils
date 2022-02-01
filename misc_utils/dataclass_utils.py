@@ -70,7 +70,7 @@ def instantiate_via_importlib(d: dict[str, Any], class_key: str = "_cls_"):
 
 IDKEY = "_id_"
 SPECIAL_KEYS = [IDKEY, "_target_", "_cls_"]
-
+CLASS_REF_NO_INSTANTIATE = "_python_dataclass_"  # use this to prevent instantiate_via_importlib, if one wants class-reference for documentation purposes only
 UNSERIALIZABLE = "<UNSERIALIZABLE>"
 
 

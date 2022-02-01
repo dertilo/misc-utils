@@ -12,6 +12,32 @@ T = TypeVar("T")
 
 
 @dataclass
+class CachedDataclasses(Iterable[T], CachedData):
+
+    jsonl_file_name: ClassVar[str] = "data.jsonl"
+
+    @property
+    def jsonl_file(self):
+        return self.prefix_cache_dir(self.jsonl_file_name)
+
+    def _build_cache(self):
+        write_jsonl(
+            self.jsonl_file,
+            self.generate_dicts_to_cache(),
+        )
+
+    @abstractmethod
+    def generate_dataclasses_to_cache(self) -> Iterator[T]:
+        raise NotImplementedError
+
+    def generate_dicts_to_cache(self) -> Iterator[dict]:
+        yield from (encode_dataclass(o) for o in self.generate_dataclasses_to_cache())
+
+    def __iter__(self) -> Iterator[T]:
+        yield from (deserialize_dataclass(s) for s in read_lines(self.jsonl_file))
+
+
+@dataclass
 class ContinuedCachedData(CachedData):
     clean_on_fail: bool = dataclasses.field(default=False, repr=False)
 

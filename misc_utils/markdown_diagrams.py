@@ -106,15 +106,18 @@ def generate_mermaid_triples(
 def process_node_name(n):
     return n.replace("__main__.", "")
 
-def write_dataclass_to_mermaid(file:str,o:Dataclass):
+
+def write_dataclass_to_mermaid(file: str, o: Dataclass):
     flow_chart = mermaid_flowchart(o)
     write_file(file, f"```mermaid\n\n{flow_chart}```")
 
 
-def mermaid_flowchart(o:Dataclass,additional_skipkeys:Optional[list[str]]=None)->str:
+def mermaid_flowchart(
+    o: Dataclass, additional_skipkeys: Optional[list[str]] = None
+) -> str:
     skip_keys = ["cache_dir", "cache_base"]
     if additional_skipkeys is not None:
-        skip_keys+=additional_skipkeys
+        skip_keys += additional_skipkeys
 
     d = encode_dataclass(o, skip_keys=skip_keys)
     edges = "\n".join(
@@ -129,4 +132,3 @@ def mermaid_flowchart(o:Dataclass,additional_skipkeys:Optional[list[str]]=None)-
 
 if __name__ == "__main__":
     o = TestDataClass(data=AnotherTestDataClass())
-

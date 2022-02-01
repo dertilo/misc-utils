@@ -53,7 +53,7 @@ def maybe_serialize(dc):
 
 
 def is_decodable(d):
-    return isinstance(d, dict) and "_target_" in d.keys()
+    return isinstance(d, dict) and "_target_" in d.keys() and "_id_" in d.keys()
 
 
 def just_try_deserialize_or_fallback(x: Any):

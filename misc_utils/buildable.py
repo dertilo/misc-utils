@@ -50,7 +50,7 @@ class Buildable:
                     f"build_self of {self.__class__.__name__} took:{duration} seconds"
                 )
         else:
-            print(f"not building {self.__class__.__name__}, is ready!")
+            # print(f"not building {self.__class__.__name__}, is ready!")
             o = self
         assert o is not None  # TODO: should be done be beartype!
         return o

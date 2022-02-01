@@ -11,10 +11,11 @@ from misc_utils.dataclass_utils import (
     serialize_dataclass,
     deserialize_dataclass,
     IDKEY,
-    encode_dataclass, MyDecoder, decode_dataclass,
+    encode_dataclass,
+    MyDecoder,
+    decode_dataclass,
 )
 from misc_utils.utils import Singleton
-
 
 
 class Casing(str, Enum):
@@ -152,6 +153,8 @@ def test_private_field(test_object):
     deser_obj._private_field = "changed value"
     deser_obj.bla["foo"][0]._another_private_field = "changed value"
     assert str(deser_obj) == str(test_object), deser_obj
+
+
 #
 #
 @dataclass
@@ -191,23 +194,26 @@ def test_deserialization_not_bothered_by_unknown_keys():
     o = deserialize_dataclass(s)
     assert o == bar, f"{o}"
 
+
 def test_encode_nonencodable():
-    inp=[1,2]
-    assert encode_dataclass(inp)==inp
-    inp=("foo",)
-    assert encode_dataclass(inp)==inp
-    inp= {"bla":1.234}
-    assert encode_dataclass(inp)==inp
+    inp = [1, 2]
+    assert encode_dataclass(inp) == inp
+    inp = ("foo",)
+    assert encode_dataclass(inp) == inp
+    inp = {"bla": 1.234}
+    assert encode_dataclass(inp) == inp
+
 
 def test_encode_container_of_dataclasses():
     bar = Bar("foo", Casing.lower, "bar")
     foo = Foo([bar])
-    d = encode_dataclass([foo,foo])
+    d = encode_dataclass([foo, foo])
     dec = decode_dataclass(d)
     assert isinstance(dec, list)
     assert all([isinstance(x, Foo) for x in dec])
     assert all([isinstance(x.bars[0], Bar) for x in dec])
     assert all([isinstance(x.bars[0].casing, Casing) for x in dec])
+
 
 def test_endecode__dataclass():
     bar = Bar("foo", Casing.lower, "bar")
@@ -215,8 +221,8 @@ def test_endecode__dataclass():
     d = encode_dataclass(foo)
 
     dec = decode_dataclass(d)
-    assert isinstance(dec, Foo),f"{dec=}"
-    assert isinstance(dec.bars[0], Bar),f"{dec=}"
+    assert isinstance(dec, Foo), f"{dec=}"
+    assert isinstance(dec.bars[0], Bar), f"{dec=}"
 
     dec = decode_dataclass([d, d])
     assert isinstance(dec, list)
@@ -224,14 +230,15 @@ def test_endecode__dataclass():
     assert all([isinstance(x.bars[0], Bar) for x in dec])
     assert all([isinstance(x.bars[0].casing, Casing) for x in dec])
 
+
 def test_endeserialize_dataclass():
     bar = Bar("foo", Casing.lower, "bar")
     foo = Foo([bar])
     d = serialize_dataclass(foo)
 
     dec = deserialize_dataclass(d)
-    assert isinstance(dec, Foo),f"{dec=}"
-    assert isinstance(dec.bars[0], Bar),f"{dec=}"
+    assert isinstance(dec, Foo), f"{dec=}"
+    assert isinstance(dec.bars[0], Bar), f"{dec=}"
 
 
 def test_None():
@@ -239,5 +246,6 @@ def test_None():
     assert bear_does_roar(lambda: encode_dataclass(None))
     assert bear_does_roar(lambda: serialize_dataclass(None))
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     test_encode_nonencodable()

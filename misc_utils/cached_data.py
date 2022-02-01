@@ -62,6 +62,9 @@ class CachedData(Buildable, ABC):
         got_cache_dir = self.cache_dir is not CREATE_CACHE_DIR_IN_BASE_DIR
         got_a_cache_base = self.cache_base is not IGNORE_THIS_USE_CACHE_DIR
         assert got_a_cache_base or got_cache_dir, f"{self.__class__}"
+        if got_cache_dir and got_a_cache_base:
+            assert self.cache_dir.startswith(self.cache_base)
+        self.maybe_fix_cache_base()
 
     def maybe_fix_cache_base(self):
         """
@@ -71,10 +74,15 @@ class CachedData(Buildable, ABC):
             if (
                 self.cache_base is not IGNORE_THIS_USE_CACHE_DIR
                 and self.cache_dir is not CREATE_CACHE_DIR_IN_BASE_DIR
+                and not self.cache_dir.startswith(os.environ["CACHE_BASE"])
             ):
+                assert self.cache_dir.startswith(self.cache_base)
                 self.cache_dir = self.cache_dir.replace(
                     self.cache_base, os.environ["CACHE_BASE"]
                 )
+                assert os.path.isdir(
+                    os.environ["CACHE_BASE"]
+                ), f"{os.environ['CACHE_BASE']=} is not a directory!"
             else:
                 pass
                 """
@@ -97,9 +105,9 @@ class CachedData(Buildable, ABC):
 
         if self._found_cached_data():
             self._load_cached()
-            print(
-                f"LOADED cached: {self.name} ({self.__class__.__name__}) from {self.cache_dir}"
-            )
+            # print(
+            #     f"LOADED cached: {self.name} ({self.__class__.__name__}) from {self.cache_dir}"
+            # )
             successfully_loaded_cached = True
         else:
             successfully_loaded_cached = False
@@ -142,8 +150,9 @@ class CachedData(Buildable, ABC):
 
     def _load_cached(self) -> None:
         # not loading persistable_state_fields+complete datum here!
-        # is everybodys own responsibility!
-        pass
+        # is everybodys own responsibility! -> why?
+        # if I can persist it I am able to deserialize it!
+        self._load_state_fields()
 
     @beartype
     def build_or_load(
@@ -177,13 +186,6 @@ class CachedData(Buildable, ABC):
                 if self.clean_on_fail:
                     shutil.rmtree(cadi, ignore_errors=True)
                 raise e
-        else:
-            loaded_dc = deserialize_dataclass(read_file(self.dataclass_json))
-            state_fields = list(
-                f for f in dataclasses.fields(self) if not f.init and f.repr
-            )
-            for f in state_fields:
-                setattr(self, f.name, getattr(loaded_dc, f.name))
 
         start = time()
         self._load_cached()
@@ -192,6 +194,14 @@ class CachedData(Buildable, ABC):
             print(
                 f"LOADED cached: {self.name} ({self.__class__.__name__}) took: {duration} seconds from {self.cache_dir}"
             )
+
+    def _load_state_fields(self):
+        loaded_dc = deserialize_dataclass(read_file(self.dataclass_json))
+        state_fields = list(
+            f for f in dataclasses.fields(self) if not f.init and f.repr
+        )
+        for f in state_fields:
+            setattr(self, f.name, getattr(loaded_dc, f.name))
 
     def create_cache_dir_from_hashed_self(self) -> str:
         all_undefined_must_be_filled(self)
