@@ -23,6 +23,7 @@ class Buildable:
     #     pass
     #
     _was_built: bool = dataclasses.field(default=False, init=False, repr=False)
+    _was_teared_down: bool = dataclasses.field(default=False, init=False, repr=False)
 
     @property
     def _is_ready(self) -> bool:
@@ -30,6 +31,13 @@ class Buildable:
         if true prevents going deeper into dependency-tree/graph
         """
         return self._was_built
+
+    @property
+    def _is_down(self) -> bool:
+        """
+        if true prevents going deeper into dependency-tree/graph
+        """
+        return self._was_teared_down
 
     @beartype
     @final  # does not enforce it but at least the IDE warns you!
@@ -84,19 +92,22 @@ class Buildable:
 
     def _tear_down_all_chrildren(self):
         for f in fields(self):
-            obj = getattr(self, f.name)
-            if isinstance(obj, Buildable):
-                # whoho! black-magic here! the child can overwrite itself and thereby shape-shift completely!
-                setattr(self, f.name, obj._tear_down())
+            if hasattr(
+                self, f.name
+            ):  # field initialized with field() -method without default do not exist! but are listed by fields!
+                obj = getattr(self, f.name)
+                if isinstance(obj, Buildable):
+                    # whoho! black-magic here! the child can overwrite itself and thereby shape-shift completely!
+                    setattr(self, f.name, obj._tear_down())
 
     def _tear_down_self(self) -> Any:
         """
         override this if you want custom tear-down behavior
-        shape-shifting here, to prevent tear-downs are triggered multiple times
-        Dataclass -> dict , beware!
+        use shape-shifting here, to prevent tear-downs are triggered multiple times
+        shape-shifting: Dataclass -> dict , via: encode_dataclass(self)
         """
-        print(f"tear-down: {self}")
-        return encode_dataclass(self)
+        self._was_teared_down = True
+        return self
 
 
 T = TypeVar("T")
