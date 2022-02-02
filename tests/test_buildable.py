@@ -1,4 +1,5 @@
-from typing import Annotated, Generic, TypeVar
+from pprint import pprint
+from typing import Annotated, Generic, TypeVar, Any
 
 from beartype.roar import BeartypeDecorHintPep585DeprecationWarning
 from warnings import filterwarnings
@@ -6,7 +7,7 @@ from warnings import filterwarnings
 filterwarnings("ignore", category=BeartypeDecorHintPep585DeprecationWarning)
 from misc_utils import beartyped_dataclass_patch
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from misc_utils.buildable import Buildable, BuildableContainer, BuildableList
 from misc_utils.dataclass_utils import (
@@ -16,14 +17,19 @@ from misc_utils.dataclass_utils import (
 )
 
 EXPECTED_STATE = "hello"
+was_torn_down = "was torn down"
 
 
 @dataclass
 class AnotherTestBuildable(Buildable):
-    state: str = volatile_state_field(default=None)
+    state: str = field(init=False)
 
     def _build_self(self):
         self.state = EXPECTED_STATE
+
+    def _tear_down_self(self) -> Any:
+        self.state = was_torn_down
+        return super()._tear_down_self()
 
 
 @dataclass
@@ -39,6 +45,39 @@ def test_buildable():
     buildable_container = BuildableContainer[list](buildables)
     b = TestBuildable(list_of_buildable=buildable_container).build()
     assert all((x.state == EXPECTED_STATE for x in buildables))
+
+
+@dataclass
+class TestTearDownBuildable(Buildable):
+    simple_depenency: AnotherTestBuildable
+    dependency: TestBuildable
+    state: str = field(init=False)
+
+    def _build_self(self):
+        self.state = "was build"
+        return self._tear_down()
+
+    def _tear_down_self(self) -> Any:
+        self.state = was_torn_down
+        return super()._tear_down_self()
+
+
+def test_tear_down():
+    torn_down_object = TestTearDownBuildable(
+        simple_depenency=AnotherTestBuildable(),
+        dependency=TestBuildable(
+            list_of_buildable=BuildableContainer[list](
+                [AnotherTestBuildable(), AnotherTestBuildable()]
+            )
+        ),
+    ).build()
+    # pprint(torn_down_object)
+    assert all(
+        (
+            o["state"] == was_torn_down
+            for o in torn_down_object["dependency"]["list_of_buildable"]["data"]
+        )
+    )
 
 
 # def test_overriding_build():

@@ -8,6 +8,7 @@ from beartype import beartype
 
 from misc_utils.dataclass_utils import (
     all_undefined_must_be_filled,
+    encode_dataclass,
 )
 from misc_utils.final_methods import Access
 
@@ -32,7 +33,7 @@ class Buildable:
 
     @beartype
     @final  # does not enforce it but at least the IDE warns you!
-    def build(self) -> "Buildable":
+    def build(self) -> Any:  # no restriction to "Buildable" to allow shape-shifting!
         """
         should NOT be overwritten!
         """
@@ -70,6 +71,33 @@ class Buildable:
         """
         pass
 
+    def _tear_down(self):
+        """
+        recursively goes through graph in same order as build
+        how to handle multiple tear-down calls?
+
+        motivation: buildable as client that communicates with some worker, worker has alters its own state which is collected during tear-down
+        and worker is told to tear-down itself
+        """
+        self._tear_down_all_chrildren()
+        return self._tear_down_self()
+
+    def _tear_down_all_chrildren(self):
+        for f in fields(self):
+            obj = getattr(self, f.name)
+            if isinstance(obj, Buildable):
+                # whoho! black-magic here! the child can overwrite itself and thereby shape-shift completely!
+                setattr(self, f.name, obj._tear_down())
+
+    def _tear_down_self(self) -> Any:
+        """
+        override this if you want custom tear-down behavior
+        shape-shifting here, to prevent tear-downs are triggered multiple times
+        Dataclass -> dict , beware!
+        """
+        print(f"tear-down: {self}")
+        return encode_dataclass(self)
+
 
 T = TypeVar("T")
 
@@ -91,6 +119,14 @@ class BuildableContainer(Generic[T], Buildable):
             if hasattr(obj, "build"):
                 obj.build()
 
+    def _tear_down_all_chrildren(self):
+        if isinstance(self.data, (list, tuple)):
+            self.data = [x._tear_down() for x in self.data]
+        elif isinstance(self.data, dict):
+            self.data = {k: v._tear_down() for k, v in self.data.items()}
+        else:
+            raise NotImplementedError
+
 
 @dataclass
 class BuildableList(Buildable, list[T]):
@@ -110,6 +146,9 @@ class BuildableList(Buildable, list[T]):
         for k, obj in enumerate(self):
             if isinstance(obj, Buildable):
                 self[k] = obj.build()
+
+    def _tear_down_all_chrildren(self):
+        self.data = [x._tear_down() for x in self.data]
 
 
 # @dataclass

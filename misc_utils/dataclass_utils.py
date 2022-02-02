@@ -77,7 +77,6 @@ UNSERIALIZABLE = "<UNSERIALIZABLE>"
 class MyCustomEncoder(json.JSONEncoder):
     """
     # see: https://stackoverflow.com/questions/64777931/what-is-the-recommended-way-to-include-properties-in-dataclasses-in-asdict-or-se
-    TODO: pydantic should make this obsolete!
     """
 
     class_reference_key = "_target_"
@@ -91,16 +90,6 @@ class MyCustomEncoder(json.JSONEncoder):
         return self._asdict(o)
 
     def _asdict(self, obj, *, dict_factory=dict):
-        """
-        does not work like this: it complains about circular dependencies
-        try:
-            o = self._asdict_inner(obj, dict_factory)
-        except Exception as e:
-            raise TypeError(
-                f"_asdict() not working on {str(obj)} of type: {type(obj)}, error: {e}"
-            )
-        return o
-        """
         # if not (dataclasses.is_dataclass(obj) or isinstance(obj, DictConfig)):
         #     raise TypeError(f"_asdict() not working on {str(obj)} of type: {type(obj)}")
         # why not also allow non-dataclass as input?
@@ -148,6 +137,7 @@ class MyCustomEncoder(json.JSONEncoder):
                     result.append((name, attr.__get__(obj)))  # Get property's value.
             return dict_factory(result)
         elif isinstance(obj, tuple) and hasattr(obj, "_fields"):
+            # TODO: this could return any class that implements _fields method! WTF! not what I want!
             return type(obj)(*(self._asdict_inner(v, dict_factory) for v in obj))
         elif isinstance(obj, (list, tuple, omegaconf.listconfig.ListConfig)):
             if isinstance(obj, omegaconf.listconfig.ListConfig):
