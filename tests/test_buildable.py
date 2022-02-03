@@ -17,7 +17,7 @@ from misc_utils.dataclass_utils import (
 )
 
 EXPECTED_STATE = "hello"
-was_torn_down = "was torn down"
+was_teared_down = "was torn down"
 
 
 @dataclass
@@ -28,7 +28,7 @@ class AnotherTestBuildable(Buildable):
         self.state = EXPECTED_STATE
 
     def _tear_down_self(self) -> Any:
-        self.state = was_torn_down
+        self.state = was_teared_down
         return super()._tear_down_self()
 
 
@@ -58,12 +58,12 @@ class TestTearDownBuildable(Buildable):
         return self._tear_down()
 
     def _tear_down_self(self) -> Any:
-        self.state = was_torn_down
+        self.state = was_teared_down
         return super()._tear_down_self()
 
 
 def test_tear_down():
-    torn_down_object = TestTearDownBuildable(
+    teared_down_object = TestTearDownBuildable(
         simple_depenency=AnotherTestBuildable(),
         dependency=TestBuildable(
             list_of_buildable=BuildableContainer[list](
@@ -71,11 +71,10 @@ def test_tear_down():
             )
         ),
     ).build()
-    # pprint(torn_down_object)
     assert all(
         (
-            o["state"] == was_torn_down
-            for o in torn_down_object["dependency"]["list_of_buildable"]["data"]
+            o.state == was_teared_down
+            for o in teared_down_object.dependency.list_of_buildable.data
         )
     )
 
@@ -100,8 +99,8 @@ def test_tear_down():
 
 
 def test_buildable_list():
-    o = BuildableList([AnotherTestBuildable()])
+    o = BuildableList([AnotherTestBuildable()]).build()
     s = serialize_dataclass(o)
     print(s)
     o2 = deserialize_dataclass(s)
-    assert o == o2
+    assert o.data[0].state == o2.data[0].state

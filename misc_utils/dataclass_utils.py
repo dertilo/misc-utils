@@ -36,13 +36,17 @@ def shallow_dataclass_from_dict(cls, dct: dict):
     is used as a "factory" in instantiate_via_importlib
     dict can contain dataclasses or whatever objects!
     """
-    obj = cls(
-        **{
-            f.name: dct[f.name]
-            for f in dataclasses.fields(cls)
-            if (f.init and f.name in dct.keys())
-        }
-    )
+    kwargs = {
+        f.name: dct[f.name]
+        for f in dataclasses.fields(cls)
+        if (f.init and f.name in dct.keys())
+    }
+    if (
+        len(kwargs.keys()) == 1
+    ):  # what a hack! enable inheriting from str, which does not allow keyword-arguments
+        obj = cls(next(iter(kwargs.values())))
+    else:
+        obj = cls(**kwargs)
     set_noninit_fields(cls, dct, obj)
     return obj
 
