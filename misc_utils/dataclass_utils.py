@@ -6,6 +6,7 @@ import json
 import re
 from dataclasses import dataclass
 from enum import Enum
+from hashlib import sha1
 from typing import Any, Dict, TypeVar, Union, Optional
 
 import omegaconf
@@ -76,6 +77,13 @@ IDKEY = "_id_"
 SPECIAL_KEYS = [IDKEY, "_target_", "_cls_"]
 CLASS_REF_NO_INSTANTIATE = "_python_dataclass_"  # use this to prevent instantiate_via_importlib, if one wants class-reference for documentation purposes only
 UNSERIALIZABLE = "<UNSERIALIZABLE>"
+
+
+def hash_dataclass(dc:Dataclass):
+    skip_keys = [IDKEY, "cache_base", "cache_dir"]
+    s = serialize_dataclass(dc, skip_keys=skip_keys)
+    hashed_self = sha1(s.encode("utf-8")).hexdigest()
+    return hashed_self
 
 
 class MyCustomEncoder(json.JSONEncoder):

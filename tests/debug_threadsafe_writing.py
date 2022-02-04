@@ -1,41 +1,20 @@
 import os
 import random
 
-import sys
-
-import filelock
-from filelock import FileLock
-from time import time, sleep
+from time import sleep
 
 from data_io.readwrite_files import write_file, read_file
 from misc_utils.processing_utils import process_with_threadpool
-
-
-def free_to_write(
-    file, fail_message=f"could not claim lock, some-one else is holding it"
-) -> bool:
-    claimed_rights_to_write = False
-    while not os.path.isfile(f"{file}.lock") and not os.path.isfile(file):
-        try:
-            with FileLock(f"{file}.lock", timeout=1):
-                claimed_rights_to_write = True
-                break
-        except filelock._error.Timeout:
-            sys.stdout.write(fail_message)
-            sys.stdout.flush()
-            fail_message = "."
-    return claimed_rights_to_write
-    # os.remove(f"{file}.lock")
+from misc_utils.utils import claim_write_access
 
 
 def main():
-    start = time()
     file = "test.txt"
 
     def compete_writing(k):
         delay = random.uniform(0, 1)
         sleep(delay)
-        if free_to_write(file, f"{k}-is waiting"):
+        if claim_write_access(file, f"{k}-is waiting"):
             o=f"{k} wrote"
             sleep(3)
             write_file(file,o)

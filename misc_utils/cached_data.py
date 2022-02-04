@@ -1,14 +1,13 @@
 import dataclasses
 import os
 import shutil
-import sys
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from hashlib import sha1
-from time import time
-from typing import ClassVar, Union, TypeVar
+from typing import ClassVar, Union
 
+import sys
 from beartype import beartype
+from time import time, sleep
 
 from data_io.readwrite_files import (
     write_json,
@@ -16,13 +15,12 @@ from data_io.readwrite_files import (
 )
 from misc_utils.buildable import Buildable
 from misc_utils.dataclass_utils import (
-    serialize_dataclass,
-    IDKEY,
     deserialize_dataclass,
     encode_dataclass,
     all_undefined_must_be_filled,
+    hash_dataclass,
 )
-from misc_utils.utils import Singleton
+from misc_utils.utils import Singleton, claim_write_access
 
 
 @dataclass
@@ -103,7 +101,7 @@ class CachedData(Buildable, ABC):
 
     def _found_and_loaded_from_cache(self):
 
-        if self._found_cached_data():
+        if not self._claimed_right_to_build_cache():
             self._load_cached()
             # print(
             #     f"LOADED cached: {self.name} ({self.__class__.__name__}) from {self.cache_dir}"
@@ -136,17 +134,36 @@ class CachedData(Buildable, ABC):
     def _prepare(self, cache_dir: str) -> None:
         pass
 
-    def _found_cached_data(self) -> bool:
+    def mkdir_cache_dir_if_not_existent_or_in_process(self, cache_dir):
+        def cache_creation_is_in_process():
+            return os.path.isfile(f"{cache_dir}.lock")
+
+        if claim_write_access(
+            cache_dir, f"{self.__class__.__name__}-{self.name}-is waiting"
+        ):
+            shutil.rmtree(cache_dir, ignore_errors=True)
+            os.makedirs(cache_dir)
+            write_to_cache = True
+        else:  # someone else already claimed it
+            while cache_creation_is_in_process():
+                sleep(1)
+            assert os.path.isfile(self.dataclass_json)
+            write_to_cache = False
+        return write_to_cache
+
+    def _claimed_right_to_build_cache(self) -> bool:
         all_undefined_must_be_filled(self)
         if self.cache_dir is CREATE_CACHE_DIR_IN_BASE_DIR:
             self.cache_dir = self.create_cache_dir_from_hashed_self()
 
-        isfile = os.path.isfile(self.dataclass_json)
+        should_build_cache = self.mkdir_cache_dir_if_not_existent_or_in_process(
+            self.cache_dir
+        )
         if os.environ.get("NO_BUILD", "False").lower() != "false":
             assert (
-                isfile
+                not should_build_cache
             ), f"env-var NO_BUILD is set but {self.__class__.__name__} did not find {self.dataclass_json=}"
-        return isfile
+        return should_build_cache
 
     def _load_cached(self) -> None:
         # not loading persistable_state_fields+complete datum here!
@@ -163,10 +180,11 @@ class CachedData(Buildable, ABC):
         if cache_base is not IGNORE_THIS_USE_CACHE_DIR:
             self.cache_base = cache_base
 
-        if not self._found_cached_data():
+        if self._claimed_right_to_build_cache():
             cadi = self.cache_dir
             shutil.rmtree(cadi, ignore_errors=True)
             os.makedirs(cadi)
+            error = None
             try:
                 start = time()
                 sys.stdout.write(
@@ -183,9 +201,13 @@ class CachedData(Buildable, ABC):
                     encode_dataclass(self),
                 )
             except Exception as e:
+                error = e
                 if self.clean_on_fail:
                     shutil.rmtree(cadi, ignore_errors=True)
-                raise e
+            finally:
+                os.remove(f"{self.cache_dir}.lock")
+                if error is not None:
+                    raise error
 
         start = time()
         self._load_cached()
@@ -205,9 +227,7 @@ class CachedData(Buildable, ABC):
 
     def create_cache_dir_from_hashed_self(self) -> str:
         all_undefined_must_be_filled(self)
-        skip_keys = [IDKEY, "cache_base", "cache_dir"]
-        s = serialize_dataclass(self, skip_keys=skip_keys)
-        hashed_self = sha1(s.encode("utf-8")).hexdigest()
+        hashed_self = hash_dataclass(self)
         typed_self = type(self).__name__
         name = self.name.replace("/", "_")
         return f"{self.cache_base}/{typed_self}-{name}-{hashed_self}"

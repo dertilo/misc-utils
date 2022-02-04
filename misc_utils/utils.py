@@ -1,10 +1,15 @@
 import collections
+import os
+
+import filelock
 import itertools
 import random
 import sys
 import traceback
 from dataclasses import dataclass, field
 from hashlib import sha1
+
+from filelock import FileLock
 from time import time
 from typing import Iterable, Callable, TypeVar, Optional, Union, Iterator, Any, Generic
 
@@ -203,3 +208,26 @@ def collapse_sequence(input: Iterable, merge_fun: Callable, get_key_fun: Callabl
 def count_many(d: dict, counters):
     for k, v in d.items():
         counters[k].update({v: 1})
+
+
+def claim_write_access(
+    file_or_dir, fail_message=f"could not claim lock, some-one else is holding it"
+) -> bool:
+    """
+    if false, someone else already claimed it!
+    """
+    claimed_rights_to_write = False
+    while (
+        not os.path.isfile(f"{file_or_dir}.lock")
+        and not os.path.isfile(file_or_dir)
+        and not os.path.isdir(file_or_dir)
+    ):
+        try:
+            with FileLock(f"{file_or_dir}.lock", timeout=1):
+                claimed_rights_to_write = True
+                break
+        except filelock._error.Timeout:
+            sys.stdout.write(fail_message)
+            sys.stdout.flush()
+            fail_message = "."
+    return claimed_rights_to_write
