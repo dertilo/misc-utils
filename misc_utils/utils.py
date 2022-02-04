@@ -1,4 +1,5 @@
 import collections
+import multiprocessing
 import os
 
 import filelock
@@ -14,6 +15,8 @@ from time import time
 from typing import Iterable, Callable, TypeVar, Optional, Union, Iterator, Any, Generic
 
 from beartype import beartype
+
+from data_io.readwrite_files import write_file, read_file
 
 T = TypeVar("T")
 T_default = TypeVar("T_default")
@@ -217,17 +220,27 @@ def claim_write_access(
     if false, someone else already claimed it!
     """
     claimed_rights_to_write = False
+    lock_file=f"{file_or_dir}.lock"
+    lock_lock_file=f"{file_or_dir}.lock.lock"
+    me = multiprocessing.current_process().name
+
     while (
-        not os.path.isfile(f"{file_or_dir}.lock")
+        not os.path.isfile(lock_file)
         and not os.path.isfile(file_or_dir)
         and not os.path.isdir(file_or_dir)
     ):
         try:
-            with FileLock(f"{file_or_dir}.lock", timeout=1):
-                claimed_rights_to_write = True
+            with FileLock(lock_file, timeout=1):
+                # if len(read_file(lock_file))==0: #TODO: not working like this!
+                #     write_file(lock_file, me)
+                #     claimed_rights_to_write=True
+                if not os.path.isfile(lock_lock_file):
+                    write_file(lock_lock_file, me)
+                    claimed_rights_to_write = True
                 break
         except filelock._error.Timeout:
-            sys.stdout.write(fail_message)
-            sys.stdout.flush()
-            fail_message = "."
+            print(fail_message)
+            # sys.stdout.write(fail_message)
+            # sys.stdout.flush()
+            # fail_message = "."
     return claimed_rights_to_write
