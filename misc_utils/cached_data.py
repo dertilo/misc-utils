@@ -1,4 +1,5 @@
 import dataclasses
+import multiprocessing
 import os
 import shutil
 from abc import ABC, abstractmethod
@@ -101,7 +102,7 @@ class CachedData(Buildable, ABC):
 
     def _found_and_loaded_from_cache(self):
 
-        if not self._claimed_right_to_build_cache():
+        if self._found_dataclass_json():
             self._load_cached()
             # print(
             #     f"LOADED cached: {self.name} ({self.__class__.__name__}) from {self.cache_dir}"
@@ -134,31 +135,27 @@ class CachedData(Buildable, ABC):
     def _prepare(self, cache_dir: str) -> None:
         pass
 
-    def mkdir_cache_dir_if_not_existent_or_in_process(self, cache_dir):
-        def cache_creation_is_in_process():
-            return os.path.isfile(f"{cache_dir}.lock")
+    def __cache_creation_is_in_process(self):
+        return os.path.isfile(f"{self.cache_dir}.lock")
 
-        if claim_write_access(
-            cache_dir, f"{self.__class__.__name__}-{self.name}-is waiting"
-        ):
-            shutil.rmtree(cache_dir, ignore_errors=True)
-            os.makedirs(cache_dir)
-            write_to_cache = True
-        else:  # someone else already claimed it
-            while cache_creation_is_in_process():
-                sleep(1)
-            assert os.path.isfile(self.dataclass_json)
-            write_to_cache = False
-        return write_to_cache
+    def _found_dataclass_json(self) -> bool:
+        if self.cache_dir is CREATE_CACHE_DIR_IN_BASE_DIR:
+            self.cache_dir = self.create_cache_dir_from_hashed_self()
+        wait_message = f"{self.__class__.__name__}-{self.name}-{multiprocessing.current_process().name}-is waiting\n"
+        while self.__cache_creation_is_in_process():
+            print(wait_message)
+            # sys.stdout.write(wait_message)
+            # sys.stdout.flush()
+            # wait_message = "."
+            sleep(1)
+        return os.path.isfile(self.dataclass_json)
 
     def _claimed_right_to_build_cache(self) -> bool:
         all_undefined_must_be_filled(self)
         if self.cache_dir is CREATE_CACHE_DIR_IN_BASE_DIR:
             self.cache_dir = self.create_cache_dir_from_hashed_self()
 
-        should_build_cache = self.mkdir_cache_dir_if_not_existent_or_in_process(
-            self.cache_dir
-        )
+        should_build_cache = claim_write_access(self.cache_dir)
         if os.environ.get("NO_BUILD", "False").lower() != "false":
             assert (
                 not should_build_cache
@@ -188,7 +185,7 @@ class CachedData(Buildable, ABC):
             try:
                 start = time()
                 sys.stdout.write(
-                    f"building CACHE {self.name} ({self.__class__.__name__})"
+                    f"building CACHE {self.name} ({self.__class__.__name__}) by {multiprocessing.current_process().name}"
                 )
                 self._build_cache()
                 sys.stdout.write(
@@ -206,8 +203,11 @@ class CachedData(Buildable, ABC):
                     shutil.rmtree(cadi, ignore_errors=True)
             finally:
                 os.remove(f"{self.cache_dir}.lock")
+                os.remove(f"{self.cache_dir}.lock.lock")
                 if error is not None:
                     raise error
+        else:
+            assert self._found_dataclass_json()
 
         start = time()
         self._load_cached()

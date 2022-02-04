@@ -214,7 +214,7 @@ def count_many(d: dict, counters):
 
 
 def claim_write_access(
-    file_or_dir, fail_message=f"could not claim lock, some-one else is holding it"
+    file_or_dir
 ) -> bool:
     """
     if false, someone else already claimed it!
@@ -239,7 +239,8 @@ def claim_write_access(
                     claimed_rights_to_write = True
                 break
         except filelock._error.Timeout:
-            print(fail_message)
+            pass
+            # print(fail_message)
             # sys.stdout.write(fail_message)
             # sys.stdout.flush()
             # fail_message = "."
