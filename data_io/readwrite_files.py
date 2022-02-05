@@ -39,11 +39,13 @@ def write_json(file: str, datum: Dict, mode="wb"):
         f.write(line)
 
 
-def write_file(file, s: str, mode="wb"):
+def write_file(file, s: str, mode="wb", do_flush=False):
     with gzip.open(file, mode=mode) if file.endswith(".gz") else open(
         file, mode=mode
     ) as f:
         f.write(s.encode("utf-8"))
+        if do_flush:
+            f.flush()
 
 
 def read_file(file, encoding="utf-8"):

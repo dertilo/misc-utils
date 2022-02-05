@@ -197,11 +197,13 @@ class CachedData(Buildable, ABC):
                     self.dataclass_json,
                     encode_dataclass(self),
                 )
+                # sleep(1) # TODO:  WTF! sleep here seems to alleviate problem with multiprocessing
             except Exception as e:
                 error = e
                 if self.clean_on_fail:
                     shutil.rmtree(cadi, ignore_errors=True)
             finally:
+                assert os.path.isfile(self.dataclass_json)
                 os.remove(f"{self.cache_dir}.lock")
                 os.remove(f"{self.cache_dir}.lock.lock")
                 if error is not None:

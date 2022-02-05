@@ -1,6 +1,7 @@
 import collections
 import multiprocessing
 import os
+from datetime import datetime
 
 import filelock
 import itertools
@@ -11,7 +12,7 @@ from dataclasses import dataclass, field
 from hashlib import sha1
 
 from filelock import FileLock
-from time import time
+from time import time, sleep
 from typing import Iterable, Callable, TypeVar, Optional, Union, Iterator, Any, Generic
 
 from beartype import beartype
@@ -213,35 +214,43 @@ def count_many(d: dict, counters):
         counters[k].update({v: 1})
 
 
-def claim_write_access(
-    file_or_dir
-) -> bool:
+def claim_write_access(file_or_dir) -> bool:
     """
     if false, someone else already claimed it!
     """
     claimed_rights_to_write = False
-    lock_file=f"{file_or_dir}.lock"
-    lock_lock_file=f"{file_or_dir}.lock.lock"
+    lock_file = f"{file_or_dir}.lock"
+    lock_lock_file = f"{file_or_dir}.lock.lock"
     me = multiprocessing.current_process().name
 
-    while (
-        not os.path.isfile(lock_file)
-        and not os.path.isfile(file_or_dir)
-        and not os.path.isdir(file_or_dir)
-    ):
+    def already_existent():
+        return os.path.isfile(file_or_dir) or os.path.isdir(file_or_dir)
+
+    while not os.path.isfile(lock_file) and not already_existent():
         try:
-            with FileLock(lock_file, timeout=1):
-                # if len(read_file(lock_file))==0: #TODO: not working like this!
-                #     write_file(lock_file, me)
+            with FileLock(lock_file, timeout=0.1):
+                print(f"{me=}: {datetime.now()}")
+                # TODO: not working like this!
+                # even though I manually force flushing, still seems to be some buffering/delay in writing to the file, -> writing to file not "real-time", not thread-safe
+                # if len(read_file(lock_file))==0:
+                #     write_file(lock_file, me,do_flush=True) #
+                #     # sleep(1.0)
                 #     claimed_rights_to_write=True
-                if not os.path.isfile(lock_lock_file):
+                #     print(f"{me=}: {datetime.now()}")
+
+                if not os.path.isfile(lock_lock_file) and not already_existent():
                     write_file(lock_lock_file, me)
+                    # sleep(1)
                     claimed_rights_to_write = True
                 break
         except filelock._error.Timeout:
-            pass
-            # print(fail_message)
+            # pass
+            print("retry claim_write_access")
             # sys.stdout.write(fail_message)
             # sys.stdout.flush()
             # fail_message = "."
+    if not claimed_rights_to_write and already_existent():
+        os.remove(
+            lock_file
+        )  # must be own lock-file of unsuccessful attempt to claim rigts
     return claimed_rights_to_write
