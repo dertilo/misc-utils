@@ -1,3 +1,4 @@
+import json
 import os
 import traceback
 
@@ -49,14 +50,17 @@ class DummyTask(Buildable):
 
 @beartype
 def consume_file(
-    get_job_file: Callable[[], Optional[str]],
+    get_job_file: Callable[[], Optional[str]], break_if_no_file=True
 ) -> tuple[Optional[str], Optional[str]]:
     content, file = None, None
     while content is None:
         file = get_job_file()
         if file is None:
             # sleep(3)
-            continue
+            if break_if_no_file:
+                break
+            else:
+                continue
 
         with FileLock(f"{file}.lock", timeout=0.1):
             if os.path.isfile(file):
@@ -70,33 +74,6 @@ def consume_file(
         #     print(f"failed to consume file!")
         #     sleep(3)
     return file, content
-
-
-@beartype
-def consume_job(
-    get_job_file: Callable[[], NeList[str]],
-) -> FileBasedJob:
-    """
-    TODO: not sure if this is really thread-safe!
-    :param job_files:
-    :return:
-    """
-    job: Optional[FileBasedJob] = None
-    file = None
-    while job is None:
-        file = get_job_file()
-        with FileLock(f"{file}.lock", timeout=0.1):
-            if os.path.isfile(file):
-                job: FileBasedJob = FileBasedJob(**read_json(file))
-                os.remove(file)
-                break
-            else:
-                os.remove(f"{file}.lock")
-        if job is None:
-            print(f"failed to get job! -> retrying!")
-            sleep(3)
-    os.remove(f"{file}.lock")
-    return job
 
 
 def write_job(queue_dir: str, job: FileBasedJob):
@@ -135,24 +112,28 @@ class FileBasedJobQueue(Buildable):
 
     @beartype
     def get(self) -> Optional[FileBasedJob]:
-        job_files = [p for p in Path(self.todo_dir).glob("*.json")]
-        if len(job_files) == 0:
-            return None
-
         def fifo_order(f):
             timestamp_seconds = int(str(f).split("rank_")[-1].replace(".json", ""))
             return timestamp_seconds
 
-        job_files = [
-            str(p)
-            for p in sorted(
-                job_files,
-                key=fifo_order,
-            )
-        ]
-        job = consume_job(job_files=job_files)
-        if job is None:
+        def get_fifo_file():
+            job_files = [p for p in Path(self.todo_dir).glob("*.json")]
+            job_files = [
+                str(p)
+                for p in sorted(
+                    job_files,
+                    key=fifo_order,
+                )
+            ]
+            if len(job_files) > 0:
+                return job_files[0]
+            else:
+                return None
+
+        file, content = consume_file(get_job_file=get_fifo_file)
+        if file is None:
             return None
+        job = FileBasedJob(**json.loads(content))
         write_job(self.doing_dir, job)
         return job
 
@@ -162,7 +143,10 @@ class FileBasedJobQueue(Buildable):
 
     @beartype
     def done(self, done_job: FileBasedJob):
-        doing_job = consume_job(job_files=[done_job.job_file(self.doing_dir)])
+        file, content = consume_file(
+            get_job_file=lambda: done_job.job_file(self.doing_dir)
+        )
+        doing_job = FileBasedJob(**json.loads(content))
         assert doing_job is not None
         write_job(self.done_dir, done_job)
 
