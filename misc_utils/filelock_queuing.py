@@ -48,6 +48,31 @@ class DummyTask(Buildable):
 
 
 @beartype
+def consume_file(
+    get_job_file: Callable[[], Optional[str]],
+) -> tuple[Optional[str], Optional[str]]:
+    content, file = None, None
+    while content is None:
+        file = get_job_file()
+        if file is None:
+            # sleep(3)
+            continue
+
+        with FileLock(f"{file}.lock", timeout=0.1):
+            if os.path.isfile(file):
+                content = read_file(file)
+                os.remove(file)
+                os.remove(f"{file}.lock")
+                break
+            else:
+                os.remove(f"{file}.lock")
+        # if content is None:
+        #     print(f"failed to consume file!")
+        #     sleep(3)
+    return file, content
+
+
+@beartype
 def consume_job(
     get_job_file: Callable[[], NeList[str]],
 ) -> FileBasedJob:
