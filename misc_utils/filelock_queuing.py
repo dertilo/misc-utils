@@ -2,6 +2,7 @@ import json
 import os
 import traceback
 from dataclasses import asdict, dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Optional, Callable, Any, TypeVar, Union
 
@@ -15,8 +16,14 @@ from time import sleep
 from data_io.readwrite_files import read_file, write_file, write_json
 from misc_utils.buildable import Buildable, BuildableList
 from misc_utils.cached_data import CachedData
-from misc_utils.dataclass_utils import serialize_dataclass, deserialize_dataclass, \
-    encode_dataclass, UNDEFINED, _UNDEFINED
+from misc_utils.dataclass_utils import (
+    serialize_dataclass,
+    deserialize_dataclass,
+    encode_dataclass,
+    UNDEFINED,
+    _UNDEFINED,
+    hash_dataclass,
+)
 
 T = TypeVar("T")
 
@@ -31,42 +38,6 @@ filelock works on nfs? https://github.com/tox-dev/py-filelock/issues/73
 
 
 @dataclass
-class BuildCachedDataElseWhere(Buildable):
-    task: Union[_UNDEFINED, CachedData] = UNDEFINED
-    queue_dir: Union[_UNDEFINED, str] = UNDEFINED
-
-    # callback_dir: str = dataclasses.field(init=False, repr=False)
-
-    @property
-    def _is_ready(self) -> bool:
-        """
-        always returns True to prevent triggering build of children
-        """
-        is_ready = self.task._found_and_loaded_from_cache()
-        # self.callback_dir=f"{self.queue_dir}_{uuid.uuid4()}"
-        if not is_ready:
-            q = Queue(self.queue_dir, serializer=json_serializer)
-            q.put(encode_dataclass(self.task))
-        return True
-
-    def _tear_down_self(self) -> Any:
-        # q = Queue(self.callback_dir, serializer=json_serializer)
-        wait_message = f"waiting for {self.task.name} {type(self.task)}"
-        while not self.task._found_and_loaded_from_cache():
-            print(wait_message)
-            sleep(1.0)
-
-        return super()._tear_down_self()
-
-
-@dataclass
-class ParallelBuildableList(BuildableList[BuildCachedDataElseWhere]):
-    def _build_self(self):
-        super()._build_self()
-        self._tear_down()
-
-
-@dataclass
 class FileBasedJob:
     id: str
     task: str  # serializabled dataclass
@@ -77,15 +48,6 @@ class FileBasedJob:
 
     def job_file(self, queue_dir: str) -> str:
         return f"{queue_dir}/{self.id}-rank_{self.rank}.json"
-
-
-@dataclass
-class DummyTask(Buildable):
-    data: str = "foo"
-
-    def _build_self(self) -> Any:
-        sleep(3)
-        print(f"dummy job {self.data} done!")
 
 
 # @dataclass
@@ -240,19 +202,48 @@ class FileBasedWorker:
                 job_queue.done(job)
 
 
-if __name__ == "__main__":
+@dataclass
+class BuildCachedFileLockQueue(Buildable):
+    task: Union[_UNDEFINED, CachedData] = UNDEFINED
+    queue_dir: Union[_UNDEFINED, str] = UNDEFINED
 
-    queue_dir = "/tmp/job_queue"
-    data_job_queue = FileBasedJobQueue(queue_dir=queue_dir).build()
-    jobs = [
-        FileBasedJob(
-            id=f"test-job-{k}",
-            rank=k,
-            task=serialize_dataclass(DummyTask(data=f"datum-{k}")),
-        )
-        for k in range(3)
-    ]
-    for j in jobs:
-        data_job_queue.put(j)
+    # callback_dir: str = dataclasses.field(init=False, repr=False)
+    def __post_init__(self):
+        self.queue = FileBasedJobQueue(self.queue_dir)
+        self.task_hash = hash_dataclass(self.task)
 
-    FileBasedWorker(queue_dir=queue_dir).run()
+    @property
+    def _is_ready(self) -> bool:
+        """
+        always returns True to prevent triggering build of children
+        """
+        is_ready = self.task._found_and_loaded_from_cache()
+        # self.callback_dir=f"{self.queue_dir}_{uuid.uuid4()}"
+        if not is_ready:
+            rank = round(
+                (datetime.now() - datetime(2022, 1, 1, 0, 0, 0)).total_seconds()
+            )
+            self.job = FileBasedJob(
+                id=f"job-{self.task_hash}",
+                task=serialize_dataclass(self.task),
+                rank=rank,
+            )
+            self.queue.put(self.job)
+        return True
+
+    def _tear_down_self(self) -> Any:
+        # q = Queue(self.callback_dir, serializer=json_serializer)
+        wait_message = f"waiting for {self.task.name} {type(self.task)}"
+        # TODO: fail-case?
+        while not self.task._found_and_loaded_from_cache():
+            print(wait_message)
+            sleep(1.0)
+
+        return super()._tear_down_self()
+
+
+@dataclass
+class ParallelBuildableList(BuildableList[BuildCachedFileLockQueue]):
+    def _build_self(self):
+        super()._build_self()
+        self._tear_down()
