@@ -228,7 +228,8 @@ def claim_write_access(file_or_dir) -> bool:
 
     while not os.path.isfile(lock_file) and not already_existent():
         try:
-            with FileLock(lock_file, timeout=0.1):
+            filelock_timeout = 0.1
+            with FileLock(lock_file, timeout=filelock_timeout):
                 print(f"{me=}: {datetime.now()}")
                 # TODO: not working like this!
                 # even though I manually force flushing, still seems to be some buffering/delay in writing to the file, -> writing to file not "real-time", not thread-safe
@@ -240,7 +241,7 @@ def claim_write_access(file_or_dir) -> bool:
 
                 if not os.path.isfile(lock_lock_file) and not already_existent():
                     write_file(lock_lock_file, me)
-                    # sleep(1)
+                    sleep(2 * filelock_timeout)  # enforce other FileLocks to time-out!
                     claimed_rights_to_write = True
                 break
         except filelock._error.Timeout:
@@ -249,8 +250,4 @@ def claim_write_access(file_or_dir) -> bool:
             # sys.stdout.write(fail_message)
             # sys.stdout.flush()
             # fail_message = "."
-    if not claimed_rights_to_write and already_existent():
-        os.remove(
-            lock_file
-        )  # must be own lock-file of unsuccessful attempt to claim rigts
     return claimed_rights_to_write
