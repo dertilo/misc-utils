@@ -5,7 +5,10 @@ from typing import Iterable, ClassVar, Iterator, Any, TypeVar
 
 from data_io.readwrite_files import write_jsonl, read_jsonl, read_lines, write_lines
 from misc_utils.cached_data import CachedData
-from misc_utils.dataclass_utils import encode_dataclass, deserialize_dataclass
+from misc_utils.dataclass_utils import (
+    encode_dataclass,
+    deserialize_dataclass,
+)
 from misc_utils.utils import just_try
 
 T = TypeVar("T")

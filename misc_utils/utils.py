@@ -230,7 +230,7 @@ def claim_write_access(file_or_dir) -> bool:
         try:
             filelock_timeout = 0.1
             with FileLock(lock_file, timeout=filelock_timeout):
-                print(f"{me=}: {datetime.now()}")
+                # print(f"{me=}: {datetime.now()}")
                 # TODO: not working like this!
                 # even though I manually force flushing, still seems to be some buffering/delay in writing to the file, -> writing to file not "real-time", not thread-safe
                 # if len(read_file(lock_file))==0:

@@ -61,6 +61,8 @@ class CachedData(Buildable, ABC):
         got_cache_dir = self.cache_dir is not CREATE_CACHE_DIR_IN_BASE_DIR
         got_a_cache_base = self.cache_base is not IGNORE_THIS_USE_CACHE_DIR
         assert got_a_cache_base or got_cache_dir, f"{self.__class__}"
+        if got_a_cache_base:
+            os.makedirs(self.cache_base, exist_ok=True)
         if got_cache_dir and got_a_cache_base:
             assert self.cache_dir.startswith(self.cache_base)
         self.maybe_fix_cache_base()

@@ -20,8 +20,6 @@ class DataToBeCached(CachedData):
     state: str = field(init=False)
 
     def _build_cache(self):
-        sleep(0.2)  # caching must take longer than wait in FileLock!
-        # otherwise finally in CachedData removes the locks another one crate lock-file that get never removed and prevents everyone from reading!
         self.state = multiprocessing.current_process().name
 
 

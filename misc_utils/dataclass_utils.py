@@ -79,7 +79,7 @@ CLASS_REF_NO_INSTANTIATE = "_python_dataclass_"  # use this to prevent instantia
 UNSERIALIZABLE = "<UNSERIALIZABLE>"
 
 
-def hash_dataclass(dc:Dataclass):
+def hash_dataclass(dc: Dataclass):
     skip_keys = [IDKEY, "cache_base", "cache_dir"]
     s = serialize_dataclass(dc, skip_keys=skip_keys)
     hashed_self = sha1(s.encode("utf-8")).hexdigest()
