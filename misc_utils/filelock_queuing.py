@@ -12,6 +12,7 @@ from filelock import FileLock
 from time import sleep
 
 from data_io.readwrite_files import read_file, write_file, write_json
+from misc_utils.build_cache_elsewhere import BuildCacheElseWhere
 from misc_utils.buildable import Buildable, BuildableList
 from misc_utils.cached_data import CachedData
 from misc_utils.dataclass_utils import (
@@ -206,43 +207,21 @@ class FileBasedWorker:
 
 
 @dataclass
-class BuildCachedFileLockQueue(Buildable):
-    task: Union[_UNDEFINED, CachedData] = UNDEFINED
+class BuildCachedFileLockQueue(BuildCacheElseWhere):
     queue_dir: Union[_UNDEFINED, str] = UNDEFINED
 
-    # callback_dir: str = dataclasses.field(init=False, repr=False)
     def __post_init__(self):
         self.queue = FileBasedJobQueue(self.queue_dir).build()
         self.task_hash = hash_dataclass(self.task)
 
-    @property
-    def _is_ready(self) -> bool:
-        """
-        always returns True to prevent triggering build of children
-        """
-        is_ready = self.task._found_and_loaded_from_cache()
-        # self.callback_dir=f"{self.queue_dir}_{uuid.uuid4()}"
-        if not is_ready:
-            rank = round(
-                (datetime.now() - datetime(2022, 1, 1, 0, 0, 0)).total_seconds()
-            )
-            self.job = FileBasedJob(
-                id=f"job-{self.task_hash}",
-                task=serialize_dataclass(self.task),
-                rank=rank,
-            )
-            self.queue.put(self.job)
-        return True
-
-    def _tear_down_self(self) -> Any:
-        # q = Queue(self.callback_dir, serializer=json_serializer)
-        wait_message = f"waiting for {self.task.name} {type(self.task)}"
-        # TODO: fail-case?
-        while not self.task._found_and_loaded_from_cache():
-            print(wait_message)
-            sleep(1.0)
-
-        return super()._tear_down_self()
+    def _put_task_in_queue(self):
+        rank = round((datetime.now() - datetime(2022, 1, 1, 0, 0, 0)).total_seconds())
+        self.job = FileBasedJob(
+            id=f"job-{self.task_hash}",
+            task=serialize_dataclass(self.task),
+            rank=rank,
+        )
+        self.queue.put(self.job)
 
 
 @dataclass
