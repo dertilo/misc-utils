@@ -1,10 +1,11 @@
+import dataclasses
 import json
 import os
 import traceback
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Callable, Any, TypeVar, Union
+from typing import Optional, Callable, Any, TypeVar, Union, Iterable, Iterator
 
 import sys
 from beartype import beartype
@@ -207,7 +208,7 @@ class FileBasedWorker:
 
 
 @dataclass
-class BuildCachedFileLockQueue(BuildCacheElseWhere):
+class FileLockQueuedCacheBuilder(BuildCacheElseWhere):
     queue_dir: Union[_UNDEFINED, str] = UNDEFINED
 
     def __post_init__(self):
@@ -225,7 +226,34 @@ class BuildCachedFileLockQueue(BuildCacheElseWhere):
 
 
 @dataclass
-class ParallelBuildableList(BuildableList[BuildCachedFileLockQueue]):
+class ParallelFileLockQueuedCacheBuilding(Buildable, Iterable[T]):
+    tasks: list[T] = dataclasses.field(init=True, repr=True)
+    queue_dir: Union[_UNDEFINED, str] = UNDEFINED
+
+    # flq_tasks: list[T] = dataclasses.field(init=False, repr=False)
+
+    def __post_init__(self):
+        """
+        packing/wrapping tasks within FileLockQueuedCacheBuilder
+        """
+        self.tasks = [
+            FileLockQueuedCacheBuilder(task=task, queue_dir=self.queue_dir)
+            for task in self.tasks
+        ]
+
     def _build_self(self):
-        super()._build_self()
+        for k, task in enumerate(self.tasks):
+            self.tasks[k] = task.build()
+
         self._tear_down()
+
+    def _tear_down_all_chrildren(self):
+        self.tasks = [x._tear_down() for x in self.tasks]
+
+    def __iter__(self) -> Iterator[T]:
+        """
+        unpacking task of type T from FileLockQueuedCacheBuilder
+        """
+        self.tasks: Iterable[FileLockQueuedCacheBuilder]
+        for flq_task in self.tasks:
+            yield flq_task.task

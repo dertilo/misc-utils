@@ -1,7 +1,7 @@
 from abc import abstractmethod
 from abc import abstractmethod
 from dataclasses import dataclass
-from typing import Any, Union
+from typing import Any, Union, TypeVar, Generic
 
 import sys
 from time import sleep
@@ -15,7 +15,7 @@ from misc_utils.dataclass_utils import (
 
 
 @dataclass
-class BuildCacheElseWhere(Buildable):
+class BuildCacheElseWhere(Buildable):#Generic[T]
     """
     elsewhere != mainprocess!
     """
