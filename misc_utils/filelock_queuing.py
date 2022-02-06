@@ -9,8 +9,6 @@ from typing import Optional, Callable, Any, TypeVar, Union
 import sys
 from beartype import beartype
 from filelock import FileLock
-from persistqueue import Queue
-from persistqueue.serializers import json as json_serializer
 from time import sleep
 
 from data_io.readwrite_files import read_file, write_file, write_json
@@ -19,7 +17,6 @@ from misc_utils.cached_data import CachedData
 from misc_utils.dataclass_utils import (
     serialize_dataclass,
     deserialize_dataclass,
-    encode_dataclass,
     UNDEFINED,
     _UNDEFINED,
     hash_dataclass,
@@ -209,7 +206,7 @@ class BuildCachedFileLockQueue(Buildable):
 
     # callback_dir: str = dataclasses.field(init=False, repr=False)
     def __post_init__(self):
-        self.queue = FileBasedJobQueue(self.queue_dir)
+        self.queue = FileBasedJobQueue(self.queue_dir).build()
         self.task_hash = hash_dataclass(self.task)
 
     @property
