@@ -76,7 +76,8 @@ def consume_file(
                 os.remove(f"{file}.lock")
                 break
             else:
-                os.remove(f"{file}.lock")
+                if os.path.isfile(f"{file}.lock"):
+                    os.remove(f"{file}.lock")
         # if content is None:
         #     print(f"failed to consume file!")
         #     sleep(3)
@@ -162,7 +163,7 @@ class FileBasedJobQueue(Buildable):
 class FileBasedWorker:
     queue_dir: str
     stop_on_error: bool = False
-    wait_for_jobs: bool = True
+    wait_even_though_queue_is_empty: bool = True
 
     def run(self):
         job_queue = FileBasedJobQueue(queue_dir=self.queue_dir)
@@ -170,33 +171,38 @@ class FileBasedWorker:
 
         while True:
             job: Optional[FileBasedJob] = job_queue.get()
-            error = None
-            if job is None:
-                if self.wait_for_jobs:
+            if job is not None:
+                self._process_job(job, job_queue)
+            else:
+                if self.wait_even_though_queue_is_empty:
                     sys.stdout.write(".")
                     sys.stdout.flush()
                     sleep(3)
                     continue
                 else:
                     break
-            try:
-                buildable = deserialize_dataclass(job.task)
-                print(f"doing {job.id}")
-                job.task = serialize_dataclass(buildable.build())
-            except Exception as e:
-                print(f"{job.id} FAILED!!! with {e}")
-                traceback.print_exc()
-                error = e
-                if self.stop_on_error:
-                    raise e
-            finally:
-                print(f"done {job.id}")
-                if error is not None:
-                    write_file(
-                        job.job_file(job_queue.done_dir).replace(".json", "_error.txt"),
-                        str(error),
-                    )
-                job_queue.done(job)
+
+    def _process_job(self, job, job_queue):
+        error = None
+
+        try:
+            buildable = deserialize_dataclass(job.task)
+            print(f"doing {job.id}")
+            job.task = serialize_dataclass(buildable.build())
+        except Exception as e:
+            print(f"{job.id} FAILED!!! with {e}")
+            traceback.print_exc()
+            error = e
+            if self.stop_on_error:
+                raise e
+        finally:
+            print(f"done {job.id}")
+            if error is not None:
+                write_file(
+                    job.job_file(job_queue.done_dir).replace(".json", "_error.txt"),
+                    str(error),
+                )
+            job_queue.done(job)
 
 
 @dataclass
