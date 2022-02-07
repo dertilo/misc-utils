@@ -15,7 +15,7 @@ from misc_utils.dataclass_utils import (
 
 
 @dataclass
-class BuildCacheElseWhere(Buildable):#Generic[T]
+class BuildCacheElseWhere(Buildable):  # Generic[T]
     """
     elsewhere != mainprocess!
     """

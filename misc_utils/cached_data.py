@@ -42,6 +42,14 @@ CREATE_CACHE_DIR_IN_BASE_DIR = _CREATE_CACHE_DIR_IN_BASE_DIR()
 DEFAULT_CACHE_BASES: dict[str, str] = {}
 
 
+def remove_if_exists(path):
+    if os.path.exists(path):
+        if os.path.isfile(path):
+            os.remove(path)
+        else:
+            shutil.rmtree(path)
+
+
 @dataclass
 class CachedData(Buildable, ABC):
     cache_base: Union[_IGNORE_THIS_USE_CACHE_DIR, str] = IGNORE_THIS_USE_CACHE_DIR
@@ -195,23 +203,22 @@ class CachedData(Buildable, ABC):
                 )
                 sys.stdout.flush()
 
-                write_json(
-                    self.dataclass_json,
-                    encode_dataclass(self),
-                )
+                write_json(self.dataclass_json, encode_dataclass(self), do_flush=True)
                 # sleep(1) # TODO:  WTF! sleep here seems to alleviate problem with multiprocessing
             except Exception as e:
                 error = e
                 if self.clean_on_fail:
                     shutil.rmtree(cadi, ignore_errors=True)
             finally:
-                assert os.path.isfile(self.dataclass_json)
-                os.remove(f"{self.cache_dir}.lock")
-                os.remove(f"{self.cache_dir}.lock.lock")
+                remove_if_exists(f"{self.cache_dir}.lock")
+                remove_if_exists(f"{self.cache_dir}.lock.lock")
                 if error is not None:
                     raise error
         else:
-            assert self._found_dataclass_json()
+            remove_if_exists(
+                f"{self.cache_dir}.lock"
+            )  # failed attempt to claim lock may still create lock-file!
+            assert self._found_dataclass_json(), f"{self.dataclass_json=} must exist!"
 
         start = time()
         self._load_cached()

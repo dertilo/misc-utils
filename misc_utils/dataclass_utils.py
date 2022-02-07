@@ -3,6 +3,7 @@ import dataclasses
 import importlib
 import inspect
 import json
+import os
 import re
 from dataclasses import dataclass
 from enum import Enum
@@ -116,6 +117,13 @@ class MyCustomEncoder(json.JSONEncoder):
         if dataclasses.is_dataclass(obj):
             result: list[tuple[str, Any]] = []
             module = obj.__class__.__module__
+            if module == "__main__":
+                prefixes = os.environ["PYTHONPATH"].split(":")
+                file_path = __file__.replace(".py", "")
+                for p in prefixes:
+                    file_path = file_path.replace(p, "")
+
+                module = file_path.strip("/").replace("/", ".")
             _target_ = f"{module}.{obj.__class__.__name__}"
             self.maybe_append(result, self.class_reference_key, _target_)
             self.maybe_append(result, IDKEY, id(obj))
