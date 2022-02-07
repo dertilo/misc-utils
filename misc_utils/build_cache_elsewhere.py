@@ -41,12 +41,15 @@ class BuildCacheElseWhere(Buildable):  # Generic[T]
     def _put_task_in_queue(self):
         raise NotImplementedError
 
+    def task_is_done(self):
+        return self.task._found_and_loaded_from_cache()
+
     def _tear_down_self(self) -> Any:
         # q = Queue(self.callback_dir, serializer=json_serializer)
         wait_message = f"waiting for {self.task.name} {type(self.task)}"
         # TODO: fail-case? currently in case of failure it hangs forever!
         for k in itertools.count():
-            if self.task._found_and_loaded_from_cache():
+            if self.task_is_done():
                 break
             elif k == 0:
                 print(wait_message)

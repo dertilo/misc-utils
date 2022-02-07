@@ -88,7 +88,8 @@ def consume_file(
 
 def write_job(queue_dir: str, job: FileBasedJob):
     file = job.job_file(queue_dir)
-    with FileLock(f"{file}.lock", timeout=1):
+    no_timeout = -1.0
+    with FileLock(f"{file}.lock", timeout=no_timeout):
         write_json(
             file,
             asdict(job),
@@ -156,8 +157,7 @@ class FileBasedJobQueue(Buildable):
         file, content = consume_file(
             get_job_file=lambda: done_job.job_file(self.doing_dir)
         )
-        doing_job = FileBasedJob(**json.loads(content))
-        assert doing_job is not None
+        assert file is not None
         write_job(self.done_dir, done_job)
 
 
@@ -201,8 +201,7 @@ class FileBasedWorker:
             print(f"{job.id} FAILED!!! with {e}")
             traceback.print_exc()
             error = e
-            if self.stop_on_error:
-                raise e
+
         finally:
             print(f"done {job.id}")
             if error is not None:
@@ -211,6 +210,8 @@ class FileBasedWorker:
                     str(error),
                 )
             job_queue.done(job)
+            if error is not None and self.stop_on_error:
+                raise error
 
 
 @dataclass
@@ -218,7 +219,7 @@ class FileLockQueuedCacheBuilder(BuildCacheElseWhere):
     queue_dir: Union[_UNDEFINED, str] = UNDEFINED
 
     def __post_init__(self):
-        self.queue = FileBasedJobQueue(self.queue_dir).build()
+        self.queue: FileBasedJobQueue = FileBasedJobQueue(self.queue_dir).build()
         self.task_hash = hash_dataclass(self.task)
 
     def _put_task_in_queue(self):
@@ -229,6 +230,12 @@ class FileLockQueuedCacheBuilder(BuildCacheElseWhere):
             rank=rank,
         )
         self.queue.put(self.job)
+
+    def task_is_done(self):
+        """
+        even if failed considered as done -> someone else handle fail-case later!
+        """
+        return self.job.job_file(self.queue.done_dir)
 
 
 @dataclass

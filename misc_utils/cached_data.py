@@ -79,19 +79,25 @@ class CachedData(Buildable, ABC):
         """
         in case one copys cache-base to a new dir, one can replace the path suffix (cache_base) via environ variable CACHE_BASE
         """
-        if "CACHE_BASE" in os.environ:
+        new_cache_base=None
+        for s in [os.environ,DEFAULT_CACHE_BASES]:
+            if "CACHE_BASE" in s:
+                new_cache_base=s["CACHE_BASE"]
+                break
+
+        if new_cache_base is not None:
             if (
                 self.cache_base is not IGNORE_THIS_USE_CACHE_DIR
                 and self.cache_dir is not CREATE_CACHE_DIR_IN_BASE_DIR
-                and not self.cache_dir.startswith(os.environ["CACHE_BASE"])
+                and not self.cache_dir.startswith(new_cache_base)
             ):
                 assert self.cache_dir.startswith(self.cache_base)
                 self.cache_dir = self.cache_dir.replace(
-                    self.cache_base, os.environ["CACHE_BASE"]
+                    self.cache_base, new_cache_base
                 )
                 assert os.path.isdir(
-                    os.environ["CACHE_BASE"]
-                ), f"{os.environ['CACHE_BASE']=} is not a directory!"
+                    new_cache_base
+                ), f"{new_cache_base=} is not a directory!"
             else:
                 pass
                 """
