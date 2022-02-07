@@ -17,3 +17,4 @@ class HPCArgs(ClusterArgs):
     num_processed_per_node: int = 8
     mem_in_gb: int = 60
     max_wall_time_hours: int = 24 * 7
+    bearify_base_dir: str = "some-base-dir to bearify"

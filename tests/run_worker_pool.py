@@ -8,6 +8,7 @@ from misc_utils.filelock_queuing import FileBasedWorker
 def worker(k):
     FileBasedWorker(queue_dir=queue_dir).run()
 
+
 if __name__ == "__main__":
     queue_dir = sys.argv[1]
 

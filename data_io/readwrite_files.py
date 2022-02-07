@@ -15,7 +15,7 @@ from beartype import beartype
 assert locale.getpreferredencoding(False) == "UTF-8"
 
 
-def write_jsonl(file: str, data: Iterable[Dict], mode="wb"):
+def write_jsonl(file: str, data: Iterable[Dict], mode="wb", do_flush: bool = False):
     def process_line(d: Dict):
         line = json.dumps(d, skipkeys=True, ensure_ascii=False)
         line = line + "\n"
@@ -27,9 +27,11 @@ def write_jsonl(file: str, data: Iterable[Dict], mode="wb"):
         file, mode=mode
     ) as f:
         f.writelines(process_line(d) for d in data)
+        if do_flush:
+            f.flush()
 
 
-def write_json(file: str, datum: Dict, mode="wb"):
+def write_json(file: str, datum: Dict, mode="wb", do_flush=False):
     with gzip.open(file, mode=mode) if file.endswith("gz") else open(
         file, mode=mode
     ) as f:
@@ -37,6 +39,8 @@ def write_json(file: str, datum: Dict, mode="wb"):
         if "b" in mode:
             line = line.encode("utf-8")
         f.write(line)
+        if do_flush:
+            f.flush()
 
 
 def write_file(file, s: str, mode="wb", do_flush=False):

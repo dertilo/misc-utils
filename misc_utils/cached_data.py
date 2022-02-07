@@ -165,7 +165,7 @@ class CachedData(Buildable, ABC):
         if self.cache_dir is CREATE_CACHE_DIR_IN_BASE_DIR:
             self.cache_dir = self.create_cache_dir_from_hashed_self()
 
-        should_build_cache = claim_write_access(self.cache_dir)
+        should_build_cache = claim_write_access(self.dataclass_json)
         if os.environ.get("NO_BUILD", "False").lower() != "false":
             assert (
                 not should_build_cache
@@ -210,13 +210,13 @@ class CachedData(Buildable, ABC):
                 if self.clean_on_fail:
                     shutil.rmtree(cadi, ignore_errors=True)
             finally:
-                remove_if_exists(f"{self.cache_dir}.lock")
-                remove_if_exists(f"{self.cache_dir}.lock.lock")
+                remove_if_exists(f"{self.dataclass_json}.lock")
+                remove_if_exists(f"{self.dataclass_json}.lock.lock")
                 if error is not None:
                     raise error
         else:
             remove_if_exists(
-                f"{self.cache_dir}.lock"
+                f"{self.dataclass_json}.lock"
             )  # failed attempt to claim lock may still create lock-file!
             assert self._found_dataclass_json(), f"{self.dataclass_json=} must exist!"
 

@@ -171,15 +171,21 @@ class FileBasedWorker:
         job_queue = FileBasedJobQueue(queue_dir=self.queue_dir)
         job_queue.build()
 
+        idle_counter = 0
+        wait_time = 3.0
+
         while True:
             job: Optional[FileBasedJob] = job_queue.get()
             if job is not None:
                 self._process_job(job, job_queue)
+                idle_counter = 0
             else:
+                idle_counter += 1
+
                 if self.wait_even_though_queue_is_empty:
-                    sys.stdout.write(".")
+                    sys.stdout.write(f"\r idle for {idle_counter*wait_time} seconds")
                     sys.stdout.flush()
-                    sleep(3)
+                    sleep(wait_time)
                     continue
                 else:
                     break

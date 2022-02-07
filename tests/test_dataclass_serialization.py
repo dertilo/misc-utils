@@ -248,4 +248,9 @@ def test_None():
 
 
 if __name__ == "__main__":
-    test_encode_nonencodable()
+    o = TestDataClass(
+        foo="foo",
+        bla={"foo": [AnotherDataClass("foo") for k in range(3)], "bar": None},
+    )
+    s = encode_dataclass(o)
+    print(s)

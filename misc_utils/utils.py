@@ -2,6 +2,7 @@ import collections
 import multiprocessing
 import os
 from datetime import datetime
+from pathlib import Path
 
 import filelock
 import itertools
@@ -221,6 +222,8 @@ def claim_write_access(file_or_dir) -> bool:
     claimed_rights_to_write = False
     lock_file = f"{file_or_dir}.lock"
     lock_lock_file = f"{file_or_dir}.lock.lock"
+    lock_path = Path(lock_file).parent
+    lock_path.mkdir(parents=True, exist_ok=True)
     me = multiprocessing.current_process().name
 
     def already_existent():

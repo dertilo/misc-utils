@@ -29,5 +29,5 @@ if __name__ == "__main__":
             return None
 
     while True:
-        file, test_datum = consume_file(get_file,break_if_no_file=False)
+        file, test_datum = consume_file(get_file, break_if_no_file=False)
         write_file(f"{path}/{name}_{Path(file).stem}.done", test_datum)
