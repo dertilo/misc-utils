@@ -235,7 +235,8 @@ class FileLockQueuedCacheBuilder(BuildCacheElseWhere):
         """
         even if failed considered as done -> someone else handle fail-case later!
         """
-        return self.job.job_file(self.queue.done_dir)
+        job_done_file_exists = os.path.isfile(self.job.job_file(self.queue.done_dir))
+        return job_done_file_exists
 
 
 @dataclass

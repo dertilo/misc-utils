@@ -4,12 +4,14 @@ import sys
 
 from misc_utils.cached_data import DEFAULT_CACHE_BASES
 from misc_utils.dummy_task import DummyTask
-from misc_utils.filelock_queuing import ParallelBuildableList, BuildCachedFileLockQueue
+from misc_utils.filelock_queuing import (
+    FileLockQueuedCacheBuilder,
+)
 
 if __name__ == "__main__":
 
     """
-python tests/run_parallel_filelock_queue.py $BASE_PATH/data/cache/JOB_QUEUE
+    python tests/run_parallel_filelock_queue.py $BASE_PATH/data/cache/JOB_QUEUE
     """
     DEFAULT_CACHE_BASES[
         "debug"
@@ -18,8 +20,10 @@ python tests/run_parallel_filelock_queue.py $BASE_PATH/data/cache/JOB_QUEUE
 
     o = ParallelBuildableList(
         [
-            BuildCachedFileLockQueue(task=DummyTask(input=f"{k}-100"), queue_dir=queue_dir)
-            for k in range(3*9)
+            FileLockQueuedCacheBuilder(
+                task=DummyTask(input=f"{k}-100"), queue_dir=queue_dir
+            )
+            for k in range(3 * 9)
         ]
     )
     o.build()
