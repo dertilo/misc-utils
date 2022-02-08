@@ -136,7 +136,7 @@ def write_dicts_to_csv(
 
 
 def read_lines_from_files(path: str, mode="b", encoding="utf-8", limit=None):
-    path=str(path)
+    path = str(path)
     g = (
         line
         for file in os.listdir(path)

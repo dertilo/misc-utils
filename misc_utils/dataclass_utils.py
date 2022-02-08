@@ -33,13 +33,13 @@ T = TypeVar("T")
 #     return dataclasses.field(default=default, init=False, repr=False)
 
 
-
 def remove_if_exists(path):
     if os.path.exists(path):
         if os.path.isfile(path):
             os.remove(path)
         else:
             shutil.rmtree(path)
+
 
 BASE_PATHES: dict[str, Union[str, "PrefixSuffix"]] = {}
 
@@ -67,11 +67,14 @@ class PrefixSuffix:
         self.__set_prefix()
         return f"{self.prefix}/{self.suffix}"
 
+
 def _just_for_backward_compatibility(path):
     # TODO: just for backward compatibility
     if isinstance(path, str):
-        assert path.startswith(BASE_PATHES["cache_root"])
-        return PrefixSuffix("cache_root", path.replace(BASE_PATHES["cache_root"], ""))
+        assert path.startswith(
+            BASE_PATHES["work_dir"]
+        ), f"{path=} does not startswith {BASE_PATHES['work_dir']}"
+        return PrefixSuffix("work_dir", path.replace(BASE_PATHES["work_dir"], ""))
     else:
         return path
 
@@ -93,8 +96,11 @@ def shallow_dataclass_from_dict(cls, dct: dict):
         obj = cls(next(iter(kwargs.values())))
     else:
         # TODO: WTF!
-        kwargs["cache_base"] = _just_for_backward_compatibility(kwargs["cache_base"])
-        kwargs["cache_dir"] = _just_for_backward_compatibility(kwargs["cache_dir"])
+        if "cache_base" in kwargs:
+            kwargs["cache_base"] = _just_for_backward_compatibility(
+                kwargs["cache_base"]
+            )
+            kwargs["cache_dir"] = _just_for_backward_compatibility(kwargs["cache_dir"])
 
         obj = cls(**kwargs)
     set_noninit_fields(cls, dct, obj)
@@ -403,4 +409,3 @@ def dataclass_to_yaml(
     # deserialize_dataclass can be different due to FILLED_AT_RUNTIME values that are filtered out
     # assert str(deser_obj) == str(o),deser_obj
     return yaml
-

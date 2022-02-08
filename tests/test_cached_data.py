@@ -26,9 +26,9 @@ class TestData(CachedData):
     cache_base: str = "bar"
     anything: Any = None
     _private_test_attr: str = field(default=None, init=False, repr=False)
-    persistable_test_state_field: str = field(init=False,repr=True,default=None)
+    persistable_test_state_field: str = field(init=False, repr=True, default=None)
     persistable_non_init_state_field: str = field(default="nix", init=False, repr=True)
-    volatile_test_state_field: str = field(init=False,repr=False,default=None)
+    volatile_test_state_field: str = field(init=False, repr=False, default=None)
 
     def _build_cache(self):
         self._private_test_attr = "private data"
