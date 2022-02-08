@@ -2,7 +2,7 @@ import os
 
 import sys
 
-from misc_utils.cached_data import DEFAULT_CACHE_BASES
+from misc_utils.cached_data import BASE_PATHES
 from misc_utils.dummy_task import DummyTask
 from misc_utils.filelock_queuing import (
     FileLockQueuedCacheBuilder,
@@ -13,7 +13,7 @@ if __name__ == "__main__":
     """
     python tests/run_parallel_filelock_queue.py $BASE_PATH/data/cache/JOB_QUEUE
     """
-    DEFAULT_CACHE_BASES[
+    BASE_PATHES[
         "debug"
     ] = f"{os.environ['BASE_PATH']}/data/cache/filelock_queuing_debug"
     queue_dir = sys.argv[1]

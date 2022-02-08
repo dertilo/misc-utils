@@ -39,7 +39,7 @@ class _CREATE_CACHE_DIR_IN_BASE_DIR(metaclass=Singleton):
 
 CREATE_CACHE_DIR_IN_BASE_DIR = _CREATE_CACHE_DIR_IN_BASE_DIR()
 
-BASE_PATHES: dict[str, str] = {}
+BASE_PATHES: dict[str, Union[str, "SharedDir"]] = {}
 
 
 def remove_if_exists(path):
@@ -51,33 +51,28 @@ def remove_if_exists(path):
 
 
 @dataclass
+class SharedDir:
+    prefix_key: str
+    suffix: str
+
+    def __repr__(self) -> str:
+        """
+        base_path may not exist no constraints here!
+        """
+        base_path = BASE_PATHES[self.prefix_key]
+        assert len(base_path) > 0, f"base_path is empty!"
+        return f"{base_path}/{self.suffix}"
+
+
+@dataclass
 class CachedData(Buildable, ABC):
-    cache_base: Union[_IGNORE_THIS_USE_CACHE_DIR, str] = IGNORE_THIS_USE_CACHE_DIR
-    cache_dir: Union[_CREATE_CACHE_DIR_IN_BASE_DIR, str] = CREATE_CACHE_DIR_IN_BASE_DIR
+    cache_base: Union[_IGNORE_THIS_USE_CACHE_DIR, SharedDir] = IGNORE_THIS_USE_CACHE_DIR
+    cache_dir: Union[
+        _CREATE_CACHE_DIR_IN_BASE_DIR, SharedDir
+    ] = CREATE_CACHE_DIR_IN_BASE_DIR
     _json_file_name: ClassVar[int] = "dataclass.json"
+    __exclude_from_hash__: ClassVar[list[str]] = []
     clean_on_fail: bool = dataclasses.field(default=True, repr=False)
-
-    base_path: str = dataclasses.field(default_factory=lambda: BASE_PATHES["base_path"])
-
-    def prefix_base_path(self, path) -> str:
-        return f"{self.base_path}/{path}"
-
-    @property
-    def full_cache_base(self):
-        # TODO: if not startswith just for backward compatibility
-        return (
-            self.prefix_base_path(self.cache_base)
-            if not self.cache_base.startswith(self.base_path)
-            else self.cache_base
-        )
-
-    @property
-    def full_cache_dir(self):
-        return (
-            self.prefix_base_path(self.cache_dir)
-            if not self.cache_dir.startswith(self.base_path)
-            else self.cache_base
-        )
 
     @property
     def dataclass_json(self):
@@ -88,16 +83,15 @@ class CachedData(Buildable, ABC):
         overrides Buildable's __post_init__
         not checkin all_undefined_must_be_filled here!
         """
-        assert os.path.isdir(self.base_path), f"{self.base_path} does not exist!"
         got_cache_dir = self.cache_dir is not CREATE_CACHE_DIR_IN_BASE_DIR
         got_a_cache_base = self.cache_base is not IGNORE_THIS_USE_CACHE_DIR
         assert got_a_cache_base or got_cache_dir, f"{self.__class__}"
 
         if got_a_cache_base:
-            os.makedirs(self.full_cache_base, exist_ok=True)
+            os.makedirs(str(self.cache_base), exist_ok=True)
 
         if got_cache_dir and got_a_cache_base:
-            assert self.cache_dir.startswith(self.cache_base)
+            assert str(self.cache_dir).startswith(str(self.cache_base))
 
     @property
     def _is_ready(self) -> bool:
@@ -133,9 +127,9 @@ class CachedData(Buildable, ABC):
 
     def prefix_cache_dir(self, path: str) -> str:
         assert isinstance(
-            self.cache_dir, str
+            self.cache_dir, SharedDir
         ), f"{self} has invalid cache_dir: {self.cache_dir}"
-        return f"{self.full_cache_dir}/{path}"
+        return f"{self.cache_dir}/{path}"
 
     @abstractmethod
     def _build_cache(self):
@@ -187,7 +181,7 @@ class CachedData(Buildable, ABC):
     ) -> None:
 
         if self._claimed_right_to_build_cache():
-            cadi = self.full_cache_dir
+            cadi = str(self.cache_dir)
             shutil.rmtree(cadi, ignore_errors=True)
             os.makedirs(cadi)
             error = None
@@ -224,20 +218,25 @@ class CachedData(Buildable, ABC):
         duration = time() - start
         if duration >= 1.0:
             print(
-                f"LOADED cached: {self.name} ({self.__class__.__name__}) took: {duration} seconds from {self.full_cache_dir}"
+                f"LOADED cached: {self.name} ({self.__class__.__name__}) took: {duration} seconds from {self.cache_dir}"
             )
 
     def _load_state_fields(self):
         loaded_dc = deserialize_dataclass(read_file(self.dataclass_json))
         state_fields = list(
-            f for f in dataclasses.fields(self) if not f.init and f.repr
+            f
+            for f in dataclasses.fields(self)
+            if (not f.init and f.repr)
         )
         for f in state_fields:
             setattr(self, f.name, getattr(loaded_dc, f.name))
 
-    def create_cache_dir_from_hashed_self(self) -> str:
+    def create_cache_dir_from_hashed_self(self) -> SharedDir:
         all_undefined_must_be_filled(self)
         hashed_self = hash_dataclass(self)
         typed_self = type(self).__name__
         name = self.name.replace("/", "_")
-        return f"{self.cache_base}/{typed_self}-{name}-{hashed_self}"
+        return SharedDir(
+            prefix_key=self.cache_base.prefix_key,
+            suffix=f"{self.cache_base.suffix}/{typed_self}-{name}-{hashed_self}",
+        )

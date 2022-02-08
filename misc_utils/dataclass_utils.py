@@ -81,10 +81,19 @@ UNSERIALIZABLE = "<UNSERIALIZABLE>"
 
 
 def hash_dataclass(dc: Dataclass):
-    skip_keys = [IDKEY, "cache_base", "cache_dir", "base_path"]
-    s = serialize_dataclass(dc, skip_keys=skip_keys)
+    """
+    under, dunder and __exclude_from_hash__ fields are not hashed!
+    """
+    skip_keys = [IDKEY, "cache_base", "cache_dir"] + [
+        f.name for f in dataclasses.fields(dc) if is_dunder(f.name)
+    ]
+    s = serialize_dataclass(dc, skip_keys=skip_keys, encode_for_hash=True)
     hashed_self = sha1(s.encode("utf-8")).hexdigest()
     return hashed_self
+
+
+def is_dunder(s):
+    return s.startswith("__") and s.endswith("__")
 
 
 class MyCustomEncoder(json.JSONEncoder):
@@ -94,6 +103,7 @@ class MyCustomEncoder(json.JSONEncoder):
 
     class_reference_key = "_target_"
     skip_undefined = True
+    encode_for_hash = False
     is_special = re.compile(
         r"^__[^\d\W]\w*__\Z", re.UNICODE
     )  # Dunder name. -> field from stackoverflow
@@ -128,11 +138,19 @@ class MyCustomEncoder(json.JSONEncoder):
             self.maybe_append(result, self.class_reference_key, _target_)
             self.maybe_append(result, IDKEY, id(obj))
             # Get values of its fields (recursively).
-            # TODO: remove f.name.startswith("_")!!
+            def exclude_for_hash(o, f_name: str) -> bool:
+                if self.encode_for_hash and hasattr(o, "__exclude_from_hash__"):
+                    return f_name in o.__exclude_from_hash__
+                else:
+                    return False
+
             feelds = (
                 f
                 for f in dataclasses.fields(obj)
-                if not f.name.startswith("_") and f.repr and hasattr(obj, f.name)
+                if f.repr
+                and hasattr(obj, f.name)
+                and not f.name.startswith("_")
+                and not exclude_for_hash(obj, f.name)
             )
             # WTF: if a field has value of dataclasses.MISSING than hasattr(obj,f.name) is True!
             for f in feelds:
@@ -260,9 +278,12 @@ def serialize_dataclass(
     class_reference_key="_target_",
     skip_undefined=True,
     skip_keys: Optional[list[str]] = None,
+    encode_for_hash: bool = False,
 ) -> str:
     return json.dumps(
-        encode_dataclass(d, class_reference_key, skip_undefined, skip_keys)
+        encode_dataclass(
+            d, class_reference_key, skip_undefined, skip_keys, encode_for_hash
+        )
     )
 
 
@@ -270,8 +291,9 @@ def serialize_dataclass(
 def encode_dataclass(
     d: Dataclass,
     class_reference_key="_target_",
-    skip_undefined=True,
+    skip_undefined: bool = True,
     skip_keys: Optional[list[str]] = None,
+    encode_for_hash: bool = False,
 ) -> Union[dict, list, tuple, set]:
     """
     encode in the sense that the dictionary representation can be decoded to the nested dataclasses object again
@@ -279,6 +301,7 @@ def encode_dataclass(
     MyCustomEncoder.class_reference_key = class_reference_key
     MyCustomEncoder.skip_undefined = skip_undefined
     MyCustomEncoder.skip_keys = skip_keys
+    MyCustomEncoder.encode_for_hash = encode_for_hash
     return MyCustomEncoder().default(d)
 
 
