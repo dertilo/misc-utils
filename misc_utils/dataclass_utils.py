@@ -81,7 +81,7 @@ UNSERIALIZABLE = "<UNSERIALIZABLE>"
 
 
 def hash_dataclass(dc: Dataclass):
-    skip_keys = [IDKEY, "cache_base", "cache_dir"]
+    skip_keys = [IDKEY, "cache_base", "cache_dir", "base_path"]
     s = serialize_dataclass(dc, skip_keys=skip_keys)
     hashed_self = sha1(s.encode("utf-8")).hexdigest()
     return hashed_self

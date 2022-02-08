@@ -39,7 +39,7 @@ class _CREATE_CACHE_DIR_IN_BASE_DIR(metaclass=Singleton):
 
 CREATE_CACHE_DIR_IN_BASE_DIR = _CREATE_CACHE_DIR_IN_BASE_DIR()
 
-DEFAULT_CACHE_BASES: dict[str, str] = {}
+BASE_PATHES: dict[str, str] = {}
 
 
 def remove_if_exists(path):
@@ -57,6 +57,28 @@ class CachedData(Buildable, ABC):
     _json_file_name: ClassVar[int] = "dataclass.json"
     clean_on_fail: bool = dataclasses.field(default=True, repr=False)
 
+    base_path: str = dataclasses.field(default_factory=lambda: BASE_PATHES["base_path"])
+
+    def prefix_base_path(self, path) -> str:
+        return f"{self.base_path}/{path}"
+
+    @property
+    def full_cache_base(self):
+        # TODO: if not startswith just for backward compatibility
+        return (
+            self.prefix_base_path(self.cache_base)
+            if not self.cache_base.startswith(self.base_path)
+            else self.cache_base
+        )
+
+    @property
+    def full_cache_dir(self):
+        return (
+            self.prefix_base_path(self.cache_dir)
+            if not self.cache_dir.startswith(self.base_path)
+            else self.cache_base
+        )
+
     @property
     def dataclass_json(self):
         return self.prefix_cache_dir(self._json_file_name)
@@ -66,41 +88,16 @@ class CachedData(Buildable, ABC):
         overrides Buildable's __post_init__
         not checkin all_undefined_must_be_filled here!
         """
+        assert os.path.isdir(self.base_path), f"{self.base_path} does not exist!"
         got_cache_dir = self.cache_dir is not CREATE_CACHE_DIR_IN_BASE_DIR
         got_a_cache_base = self.cache_base is not IGNORE_THIS_USE_CACHE_DIR
         assert got_a_cache_base or got_cache_dir, f"{self.__class__}"
+
         if got_a_cache_base:
-            os.makedirs(self.cache_base, exist_ok=True)
+            os.makedirs(self.full_cache_base, exist_ok=True)
+
         if got_cache_dir and got_a_cache_base:
             assert self.cache_dir.startswith(self.cache_base)
-        self.maybe_fix_cache_base()
-
-    def maybe_fix_cache_base(self):
-        """
-        in case one copys cache-base to a new dir, one can replace the path suffix (cache_base) via environ variable CACHE_BASE
-        """
-        new_cache_base = None
-        for s in [os.environ, DEFAULT_CACHE_BASES]:
-            if "CACHE_BASE" in s:
-                new_cache_base = s["CACHE_BASE"]
-                break
-
-        if new_cache_base is not None:
-            if (
-                self.cache_base is not IGNORE_THIS_USE_CACHE_DIR
-                and self.cache_dir is not CREATE_CACHE_DIR_IN_BASE_DIR
-                and not self.cache_dir.startswith(new_cache_base)
-            ):
-                assert self.cache_dir.startswith(self.cache_base)
-                self.cache_dir = self.cache_dir.replace(self.cache_base, new_cache_base)
-                assert os.path.isdir(
-                    new_cache_base
-                ), f"{new_cache_base=} is not a directory!"
-            else:
-                pass
-                """
-                nodes like RglobRawCorpusFromDicts in the build-graph that are NOT build just exist in the dataclass-graph for documentation purposes
-                """
 
     @property
     def _is_ready(self) -> bool:
@@ -135,11 +132,10 @@ class CachedData(Buildable, ABC):
         return ""
 
     def prefix_cache_dir(self, path: str) -> str:
-        self.maybe_fix_cache_base()
         assert isinstance(
             self.cache_dir, str
         ), f"{self} has invalid cache_dir: {self.cache_dir}"
-        return f"{self.cache_dir}/{path}"
+        return f"{self.full_cache_dir}/{path}"
 
     @abstractmethod
     def _build_cache(self):
@@ -188,14 +184,10 @@ class CachedData(Buildable, ABC):
     @beartype
     def build_or_load(
         self,
-        cache_base: Union[_IGNORE_THIS_USE_CACHE_DIR, str] = IGNORE_THIS_USE_CACHE_DIR,
     ) -> None:
 
-        if cache_base is not IGNORE_THIS_USE_CACHE_DIR:
-            self.cache_base = cache_base
-
         if self._claimed_right_to_build_cache():
-            cadi = self.cache_dir
+            cadi = self.full_cache_dir
             shutil.rmtree(cadi, ignore_errors=True)
             os.makedirs(cadi)
             error = None
@@ -232,7 +224,7 @@ class CachedData(Buildable, ABC):
         duration = time() - start
         if duration >= 1.0:
             print(
-                f"LOADED cached: {self.name} ({self.__class__.__name__}) took: {duration} seconds from {self.cache_dir}"
+                f"LOADED cached: {self.name} ({self.__class__.__name__}) took: {duration} seconds from {self.full_cache_dir}"
             )
 
     def _load_state_fields(self):
