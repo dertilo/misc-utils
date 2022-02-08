@@ -16,6 +16,8 @@ assert locale.getpreferredencoding(False) == "UTF-8"
 
 
 def write_jsonl(file: str, data: Iterable[Dict], mode="wb", do_flush: bool = False):
+    file = str(file)
+
     def process_line(d: Dict):
         line = json.dumps(d, skipkeys=True, ensure_ascii=False)
         line = line + "\n"
@@ -32,6 +34,7 @@ def write_jsonl(file: str, data: Iterable[Dict], mode="wb", do_flush: bool = Fal
 
 
 def write_json(file: str, datum: Dict, mode="wb", do_flush=False):
+    file = str(file)
     with gzip.open(file, mode=mode) if file.endswith("gz") else open(
         file, mode=mode
     ) as f:
@@ -44,6 +47,7 @@ def write_json(file: str, datum: Dict, mode="wb", do_flush=False):
 
 
 def write_file(file, s: str, mode="wb", do_flush=False):
+    file = str(file)
     with gzip.open(file, mode=mode) if file.endswith(".gz") else open(
         file, mode=mode
     ) as f:
@@ -53,6 +57,7 @@ def write_file(file, s: str, mode="wb", do_flush=False):
 
 
 def read_file(file, encoding="utf-8"):
+    file = str(file)
     file_io = (
         gzip.open(file, mode="r", encoding=encoding)
         if file.endswith(".gz")
@@ -63,6 +68,8 @@ def read_file(file, encoding="utf-8"):
 
 
 def write_lines(file, lines: Iterable[str], mode="wb"):
+    file = str(file)
+
     def process_line(line):
         line = line + "\n"
         if "b" in mode:  # useful for "text"-mode "t" which uses line-wise buffering
@@ -77,8 +84,9 @@ def write_lines(file, lines: Iterable[str], mode="wb"):
 
 @beartype
 def write_csv(
-    file: str, data: Iterable[list[Any]], header: list[str], delimiter: str = "\t"
+    file, data: Iterable[list[Any]], header: list[str], delimiter: str = "\t"
 ):
+    file = str(file)
     write_lines(
         file,
         itertools.chain(
@@ -109,7 +117,7 @@ def build_csv_row(datum: list[Any], delimiter: str = "\t"):
 
 @beartype
 def write_dicts_to_csv(
-    file: str,
+    file,
     data: Iterable[dict[str, Any]],
     header: Optional[list[str]] = None,
     delimiter: str = "\t",
@@ -128,6 +136,7 @@ def write_dicts_to_csv(
 
 
 def read_lines_from_files(path: str, mode="b", encoding="utf-8", limit=None):
+    path=str(path)
     g = (
         line
         for file in os.listdir(path)
@@ -140,6 +149,7 @@ def read_lines_from_files(path: str, mode="b", encoding="utf-8", limit=None):
 
 
 def read_lines(file, encoding="utf-8", limit=None, num_to_skip=0) -> Iterator[str]:
+    file = str(file)
     mode = "rb"
     file_io = (
         gzip.open(file, mode=mode)
@@ -163,7 +173,8 @@ def read_jsonl(
         yield json.loads(l)
 
 
-def read_json(file: str, mode="b"):
+def read_json(file, mode="b") -> dict:
+    file = str(file)
     with gzip.open(file, mode="r" + mode) if file.endswith("gz") else open(
         file, mode="r" + mode
     ) as f:

@@ -11,7 +11,6 @@ from dataclasses import dataclass, field
 
 from misc_utils.buildable import Buildable, BuildableContainer, BuildableList
 from misc_utils.dataclass_utils import (
-    volatile_state_field,
     serialize_dataclass,
     deserialize_dataclass,
 )

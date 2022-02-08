@@ -19,7 +19,7 @@ from misc_utils.dataclass_utils import (
     deserialize_dataclass,
     encode_dataclass,
     all_undefined_must_be_filled,
-    hash_dataclass,
+    hash_dataclass, PrefixSuffix,
 )
 from misc_utils.utils import Singleton, claim_write_access
 
@@ -39,36 +39,15 @@ class _CREATE_CACHE_DIR_IN_BASE_DIR(metaclass=Singleton):
 
 CREATE_CACHE_DIR_IN_BASE_DIR = _CREATE_CACHE_DIR_IN_BASE_DIR()
 
-BASE_PATHES: dict[str, Union[str, "SharedDir"]] = {}
-
-
-def remove_if_exists(path):
-    if os.path.exists(path):
-        if os.path.isfile(path):
-            os.remove(path)
-        else:
-            shutil.rmtree(path)
-
-
-@dataclass
-class SharedDir:
-    prefix_key: str
-    suffix: str
-
-    def __repr__(self) -> str:
-        """
-        base_path may not exist no constraints here!
-        """
-        base_path = BASE_PATHES[self.prefix_key]
-        assert len(base_path) > 0, f"base_path is empty!"
-        return f"{base_path}/{self.suffix}"
-
 
 @dataclass
 class CachedData(Buildable, ABC):
-    cache_base: Union[_IGNORE_THIS_USE_CACHE_DIR, SharedDir] = IGNORE_THIS_USE_CACHE_DIR
+    # str for backward compatibility
+    cache_base: Union[
+        _IGNORE_THIS_USE_CACHE_DIR, PrefixSuffix
+    ] = IGNORE_THIS_USE_CACHE_DIR
     cache_dir: Union[
-        _CREATE_CACHE_DIR_IN_BASE_DIR, SharedDir
+        _CREATE_CACHE_DIR_IN_BASE_DIR, PrefixSuffix
     ] = CREATE_CACHE_DIR_IN_BASE_DIR
     _json_file_name: ClassVar[int] = "dataclass.json"
     __exclude_from_hash__: ClassVar[list[str]] = []
@@ -127,7 +106,7 @@ class CachedData(Buildable, ABC):
 
     def prefix_cache_dir(self, path: str) -> str:
         assert isinstance(
-            self.cache_dir, SharedDir
+            self.cache_dir, PrefixSuffix
         ), f"{self} has invalid cache_dir: {self.cache_dir}"
         return f"{self.cache_dir}/{path}"
 
@@ -224,19 +203,17 @@ class CachedData(Buildable, ABC):
     def _load_state_fields(self):
         loaded_dc = deserialize_dataclass(read_file(self.dataclass_json))
         state_fields = list(
-            f
-            for f in dataclasses.fields(self)
-            if (not f.init and f.repr)
+            f for f in dataclasses.fields(self) if (not f.init and f.repr)
         )
         for f in state_fields:
             setattr(self, f.name, getattr(loaded_dc, f.name))
 
-    def create_cache_dir_from_hashed_self(self) -> SharedDir:
+    def create_cache_dir_from_hashed_self(self) -> PrefixSuffix:
         all_undefined_must_be_filled(self)
         hashed_self = hash_dataclass(self)
         typed_self = type(self).__name__
         name = self.name.replace("/", "_")
-        return SharedDir(
+        return PrefixSuffix(
             prefix_key=self.cache_base.prefix_key,
             suffix=f"{self.cache_base.suffix}/{typed_self}-{name}-{hashed_self}",
         )

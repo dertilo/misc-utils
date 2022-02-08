@@ -15,8 +15,6 @@ from misc_utils.cached_data import (
     CREATE_CACHE_DIR_IN_BASE_DIR,
 )
 from misc_utils.dataclass_utils import (
-    persistable_state_field,
-    volatile_state_field,
     shallow_dataclass_from_dict,
     encode_dataclass,
 )
@@ -28,9 +26,9 @@ class TestData(CachedData):
     cache_base: str = "bar"
     anything: Any = None
     _private_test_attr: str = field(default=None, init=False, repr=False)
-    persistable_test_state_field: str = persistable_state_field(default="nix")
+    persistable_test_state_field: str = field(init=False,repr=True,default=None)
     persistable_non_init_state_field: str = field(default="nix", init=False, repr=True)
-    volatile_test_state_field: str = volatile_state_field(default="bla")
+    volatile_test_state_field: str = field(init=False,repr=False,default=None)
 
     def _build_cache(self):
         self._private_test_attr = "private data"

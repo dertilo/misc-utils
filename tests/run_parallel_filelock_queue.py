@@ -2,7 +2,7 @@ import os
 
 import sys
 
-from misc_utils.cached_data import BASE_PATHES
+from misc_utils.dataclass_utils import BASE_PATHES
 from misc_utils.dummy_task import DummyTask
 from misc_utils.filelock_queuing import (
     FileLockQueuedCacheBuilder,

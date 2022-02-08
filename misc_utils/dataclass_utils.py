@@ -5,10 +5,11 @@ import inspect
 import json
 import os
 import re
+import shutil
 from dataclasses import dataclass
 from enum import Enum
 from hashlib import sha1
-from typing import Any, Dict, TypeVar, Union, Optional
+from typing import Any, Dict, TypeVar, Union, Optional, ClassVar
 
 import omegaconf
 from beartype import beartype
@@ -20,16 +21,59 @@ from misc_utils.utils import Singleton, just_try
 
 T = TypeVar("T")
 
+# TODO: nice idea but IDE says NO!
+# def persistable_state_field(default=dataclasses.MISSING):
+#     """
+#     TODO: can be misleading, cause the field is only persisted for objects that inherit from CachedData
+#     """
+#     return dataclasses.field(default=default, init=False, repr=True)
+#
+#
+# def volatile_state_field(default=dataclasses.MISSING):
+#     return dataclasses.field(default=default, init=False, repr=False)
 
-def persistable_state_field(default=dataclasses.MISSING):
-    """
-    TODO: can be misleading, cause the field is only persisted for objects that inherit from CachedData
-    """
-    return dataclasses.field(default=default, init=False, repr=True)
 
 
-def volatile_state_field(default=dataclasses.MISSING):
-    return dataclasses.field(default=default, init=False, repr=False)
+def remove_if_exists(path):
+    if os.path.exists(path):
+        if os.path.isfile(path):
+            os.remove(path)
+        else:
+            shutil.rmtree(path)
+
+BASE_PATHES: dict[str, Union[str, "PrefixSuffix"]] = {}
+
+
+@dataclass
+class PrefixSuffix:
+    prefix_key: str
+    suffix: str
+
+    prefix: str = dataclasses.field(init=False)
+    __exclude_from_hash__: ClassVar[list[str]] = ["prefix"]
+
+    def __set_prefix(self):
+        self.prefix = BASE_PATHES[self.prefix_key]
+        assert len(self.prefix) > 0, f"base_path is empty!"
+
+    def __post_init__(self):
+        # if prefix is set only in post_init this will be overwritten by _load_state_fields!
+        self.__set_prefix()
+
+    def __repr__(self) -> str:
+        """
+        base_path may not exist no constraints here!
+        """
+        self.__set_prefix()
+        return f"{self.prefix}/{self.suffix}"
+
+def _just_for_backward_compatibility(path):
+    # TODO: just for backward compatibility
+    if isinstance(path, str):
+        assert path.startswith(BASE_PATHES["cache_root"])
+        return PrefixSuffix("cache_root", path.replace(BASE_PATHES["cache_root"], ""))
+    else:
+        return path
 
 
 def shallow_dataclass_from_dict(cls, dct: dict):
@@ -48,6 +92,10 @@ def shallow_dataclass_from_dict(cls, dct: dict):
     ):  # what a hack! enable inheriting from str, which does not allow keyword-arguments
         obj = cls(next(iter(kwargs.values())))
     else:
+        # TODO: WTF!
+        kwargs["cache_base"] = _just_for_backward_compatibility(kwargs["cache_base"])
+        kwargs["cache_dir"] = _just_for_backward_compatibility(kwargs["cache_dir"])
+
         obj = cls(**kwargs)
     set_noninit_fields(cls, dct, obj)
     return obj
@@ -355,3 +403,4 @@ def dataclass_to_yaml(
     # deserialize_dataclass can be different due to FILLED_AT_RUNTIME values that are filtered out
     # assert str(deser_obj) == str(o),deser_obj
     return yaml
+
