@@ -8,21 +8,23 @@ from beartype import beartype
 
 from data_io.readwrite_files import write_lines, write_file
 from misc_utils.beartypes import Dataclass
+from misc_utils.cached_data import (
+    _IGNORE_THIS_USE_CACHE_DIR,
+    _CREATE_CACHE_DIR_IN_BASE_DIR,
+)
 from misc_utils.dataclass_utils import (
     MyCustomEncoder,
     serialize_dataclass,
     encode_dataclass,
+    _UNDEFINED,
 )
 
 
-@dataclass
-class AnotherTestDataClass:
-    data: float = 1.0
-
-
-@dataclass
-class TestDataClass:
-    data: AnotherTestDataClass
+classes_black_list = [
+    _CREATE_CACHE_DIR_IN_BASE_DIR.__name__,
+    _IGNORE_THIS_USE_CACHE_DIR.__name__,
+    _UNDEFINED.__name__,
+]
 
 
 @dataclass
@@ -50,23 +52,25 @@ class Node:
         return f'{self.id}["{text}"]'
 
 
-def build_node(x: Any):
+@beartype
+def build_node(x: Any) -> tuple[Node, list[str]]:
     if isinstance(x, dict):
-        d = x
+        d: dict[str, Any] = x
         params = [
             k
             for k, v in d.items()
             if "_target_" not in json.dumps(v) and k not in ["_target_", "_id_"]
         ]
-
         dependencies = [
             k for k, v in d.items() if k not in params and k not in ["_target_", "_id_"]
         ]
 
         if "_target_" in x.keys():
-            node = Node(str(x["_id_"]), x["_target_"], params={k: d[k] for k in params})
+            # node = Node(str(x["_id_"]), x["_target_"], params={k: d[k] for k in params})
+            node = Node(str(x["_id_"]), x["_target_"], params={})
         else:
             node = Node(str(id(x)), "dict", params={k: d[k] for k in params})
+            # node = Node(str(id(x)), "dict", params={})
     else:
         # uuid cause I don't want builtin object to be concentrated in single node
         node = Node(f"{uuid.uuid1()}", type(x).__name__, params=x)
@@ -87,12 +91,26 @@ def generate_mermaid_triples(
         if list_to_be_dictified:
             d["data"] = {f"{i}": e for i, e in enumerate(d["data"])} | {
                 "_target_": "list",
-                "_id_": f"1234",
+                "_id_": f"{uuid.uuid4()}",
+            }
+
+    hack_for_buildable_list = d.get("_target_", "").endswith("BuildableList")
+    if hack_for_buildable_list:
+        list_to_be_dictified = isinstance(d["data"], list)
+        if list_to_be_dictified:
+            d["data"] = {f"{i}": e for i, e in enumerate(d["data"])} | {
+                "_target_": "list",
+                "_id_": f"{uuid.uuid4()}",
             }
 
     node_from, dependencies = build_node(d)
     for k in dependencies:
         v = d[k]
+        if (
+            isinstance(v, dict)
+            and v.get("_target_", "").split(".")[-1] in classes_black_list
+        ):
+            continue
         node_to, _ = build_node(v)
         triple = node_from, k, node_to
         triple_id = "-".join([f"{x}" for x in triple])
@@ -126,9 +144,5 @@ def mermaid_flowchart(
             for node_from, param_name, node_to in generate_mermaid_triples(d)
         ]
     )
-    flow_chart = f"flowchart LR\n\n{edges}\n"
+    flow_chart = f"flowchart TD\n\n{edges}\n"
     return flow_chart
-
-
-if __name__ == "__main__":
-    o = TestDataClass(data=AnotherTestDataClass())

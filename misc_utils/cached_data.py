@@ -23,7 +23,7 @@ from misc_utils.dataclass_utils import (
     remove_if_exists,
 )
 from misc_utils.prefix_suffix import PrefixSuffix
-from misc_utils.utils import Singleton, claim_write_access
+from misc_utils.utils import Singleton, claim_write_access, just_try
 
 
 @dataclass
@@ -154,7 +154,12 @@ class CachedData(Buildable, ABC):
         # not loading persistable_state_fields+complete datum here!
         # is everybodys own responsibility! -> why?
         # if I can persist it I am able to deserialize it!
-        self._load_state_fields()
+        just_try(
+            lambda: self._load_state_fields(),
+            reraise=True,
+            verbose=True,
+            fail_print_message_builder=lambda: f"could not _load_state_fields for {self=}",
+        )
 
     @beartype
     def build_or_load(

@@ -43,7 +43,8 @@ def just_try(
                 else ""
             )
             print(f"\ntried and failed with: {e}\n{m}\n")
-            traceback.print_exc(file=sys.stderr)
+            if fail_print_message_builder is None:
+                traceback.print_exc(file=sys.stderr)
         if reraise:
             raise e
         if fail_return_message_builder is not None:

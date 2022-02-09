@@ -66,24 +66,17 @@ def shallow_dataclass_from_dict(cls, dct: dict):
         for f in dataclasses.fields(cls)
         if (f.init and f.name in dct.keys())
     }
-    if (
-        len(kwargs.keys()) == 1
-    ):  # what a hack! enable inheriting from str, which does not allow keyword-arguments
-        obj = cls(next(iter(kwargs.values())))
-    else:
-        # TODO: WTF!
-        if "cache_base" in kwargs:
-            kwargs["cache_base"] = _just_for_backward_compatibility(
-                kwargs["cache_base"]
-            )
-            kwargs["cache_dir"] = _just_for_backward_compatibility(kwargs["cache_dir"])
+    # TODO: WTF!
+    if "cache_base" in kwargs:
+        kwargs["cache_base"] = _just_for_backward_compatibility(kwargs["cache_base"])
+        kwargs["cache_dir"] = _just_for_backward_compatibility(kwargs["cache_dir"])
 
-        obj = just_try(
-            lambda: cls(**kwargs),
-            reraise=True,
-            verbose=True,
-            fail_print_message_builder=lambda: f"fail class: {cls=}\n{dct=}\n{kwargs=}",
-        )
+    obj = just_try(
+        lambda: cls(**kwargs),
+        reraise=True,
+        verbose=True,
+        fail_print_message_builder=lambda: f"fail class: {cls=}\n{dct=}\n{kwargs=}",
+    )
     set_noninit_fields(cls, dct, obj)
     return obj
 
@@ -100,7 +93,15 @@ def instantiate_via_importlib(d: dict[str, Any], class_key: str = "_cls_"):
     # cause hydra cannot instantiate recursively in lists
     fullpath = d.pop(class_key)
     *module_path, class_name = fullpath.split(".")
-    clazz = getattr(importlib.import_module(".".join(module_path)), class_name)
+    module_reference = ".".join(module_path)
+    if (
+        class_name == "PrefixSuffix"
+        and module_reference == "misc_utils.dataclass_utils"
+    ):
+        # TODO: hack for backward compatibility
+        module_reference = "misc_utils.prefix_suffix"
+
+    clazz = getattr(importlib.import_module(module_reference), class_name)
     if hasattr(clazz, "create"):
         return clazz.create(**d)
     elif hasattr(clazz, dataclasses._FIELDS):
@@ -257,6 +258,7 @@ class MyDecoder(json.JSONDecoder):
             else:
                 class_key = None
             if class_key is not None and IDKEY in dct:
+                assert class_key in dct
                 # if IDKEY in dct:
                 eid = dct.pop(IDKEY)
                 # else:
@@ -292,19 +294,30 @@ def to_dict(o) -> Dict:
 
 
 @beartype
+def _json_loads_decode_dataclass(s: str):
+    # TODO: just_try just for debugging
+    return just_try(
+        lambda: json.loads(s, cls=MyDecoder),
+        reraise=True,
+        verbose=True,
+        fail_print_message_builder=lambda: f"failed to decode: {s=}",
+    )
+
+
+@beartype
 def decode_dataclass(o: Union[dict, list, tuple]) -> Dataclass:
     # TODO: there must be a better way than, json.dumps twice!
     if not isinstance(o, str):
         o = json.dumps(o)
     o = json.loads(o, cls=Base64Decoder)
-    o = json.loads(json.dumps(o), cls=MyDecoder)
+    o = _json_loads_decode_dataclass(json.dumps(o))
     return o
 
 
 @beartype
 def deserialize_dataclass(o: NeStr) -> Dataclass:
     o = json.loads(o, cls=Base64Decoder)
-    o = json.loads(json.dumps(o), cls=MyDecoder)
+    o = _json_loads_decode_dataclass(json.dumps(o))
     return o
 
 
