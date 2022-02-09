@@ -23,6 +23,7 @@ from misc_utils.dataclass_utils import (
     _UNDEFINED,
     hash_dataclass,
 )
+from misc_utils.prefix_suffix import PrefixSuffix
 
 T = TypeVar("T")
 
@@ -99,7 +100,7 @@ def write_job(queue_dir: str, job: FileBasedJob):
 
 @dataclass
 class FileBasedJobQueue(Buildable):
-    queue_dir: str
+    queue_dir: PrefixSuffix
 
     @property
     def states(self):
@@ -163,7 +164,7 @@ class FileBasedJobQueue(Buildable):
 
 @dataclass
 class FileBasedWorker:
-    queue_dir: str
+    queue_dir: PrefixSuffix
     stop_on_error: bool = False
     wait_even_though_queue_is_empty: bool = True
 
@@ -216,7 +217,7 @@ class FileBasedWorker:
 
 @dataclass
 class FileLockQueuedCacheBuilder(BuildCacheElseWhere):
-    queue_dir: Union[_UNDEFINED, str] = UNDEFINED
+    queue_dir: Union[_UNDEFINED, PrefixSuffix] = UNDEFINED
 
     def __post_init__(self):
         self.queue: FileBasedJobQueue = FileBasedJobQueue(self.queue_dir).build()
@@ -242,7 +243,7 @@ class FileLockQueuedCacheBuilder(BuildCacheElseWhere):
 @dataclass
 class ParallelFileLockQueuedCacheBuilding(Buildable, Iterable[T]):
     tasks: list[T] = dataclasses.field(init=True, repr=True)
-    queue_dir: Union[_UNDEFINED, str] = UNDEFINED
+    queue_dir: Union[_UNDEFINED, PrefixSuffix] = UNDEFINED
 
     # flq_tasks: list[T] = dataclasses.field(init=False, repr=False)
 

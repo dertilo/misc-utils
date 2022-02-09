@@ -7,13 +7,12 @@ import os
 import re
 import shutil
 from dataclasses import dataclass
-from enum import Enum
 from hashlib import sha1
-from typing import Any, Dict, TypeVar, Union, Optional, ClassVar
+from typing import Any, Dict, TypeVar, Union, Optional
 
 import omegaconf
 from beartype import beartype
-from omegaconf import OmegaConf, DictConfig
+from omegaconf import OmegaConf
 
 from misc_utils.base64_utils import Base64Decoder
 from misc_utils.beartypes import Dataclass, NeStr
@@ -41,40 +40,17 @@ def remove_if_exists(path):
             shutil.rmtree(path)
 
 
-BASE_PATHES: dict[str, Union[str, "PrefixSuffix"]] = {}
-
-
-@dataclass
-class PrefixSuffix:
-    prefix_key: str
-    suffix: str
-
-    prefix: str = dataclasses.field(init=False)
-    __exclude_from_hash__: ClassVar[list[str]] = ["prefix"]
-
-    def __set_prefix(self):
-        self.prefix = BASE_PATHES[self.prefix_key]
-        assert len(self.prefix) > 0, f"base_path is empty!"
-
-    def __post_init__(self):
-        # if prefix is set only in post_init this will be overwritten by _load_state_fields!
-        self.__set_prefix()
-
-    def __repr__(self) -> str:
-        """
-        base_path may not exist no constraints here!
-        """
-        self.__set_prefix()
-        return f"{self.prefix}/{self.suffix}"
-
-
 def _just_for_backward_compatibility(path):
+    prefix_suffix_module = importlib.import_module("misc_utils.prefix_suffix")
+    BASE_PATHES = prefix_suffix_module.BASE_PATHES
     # TODO: just for backward compatibility
     if isinstance(path, str):
         assert path.startswith(
             BASE_PATHES["work_dir"]
         ), f"{path=} does not startswith {BASE_PATHES['work_dir']}"
-        return PrefixSuffix("work_dir", path.replace(BASE_PATHES["work_dir"], ""))
+        PrefixSuffix_clazz = getattr(prefix_suffix_module, "PrefixSuffix")
+
+        return PrefixSuffix_clazz("work_dir", path.replace(BASE_PATHES["work_dir"], ""))
     else:
         return path
 
@@ -102,7 +78,12 @@ def shallow_dataclass_from_dict(cls, dct: dict):
             )
             kwargs["cache_dir"] = _just_for_backward_compatibility(kwargs["cache_dir"])
 
-        obj = cls(**kwargs)
+        obj = just_try(
+            lambda: cls(**kwargs),
+            reraise=True,
+            verbose=True,
+            fail_print_message_builder=lambda: f"fail class: {cls=}\n{dct=}\n{kwargs=}",
+        )
     set_noninit_fields(cls, dct, obj)
     return obj
 

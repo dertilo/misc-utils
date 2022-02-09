@@ -30,18 +30,24 @@ def just_try(
     default: T_default = None,
     reraise: bool = False,
     verbose: bool = False,
-    fail_message_builder: Optional[Callable[..., Any]] = None,
+    fail_return_message_builder: Optional[Callable[..., Any]] = None,
+    fail_print_message_builder: Optional[Callable[..., Any]] = None,
 ) -> Union[T, T_default]:
     try:
         return supplier()
     except Exception as e:
         if verbose:
-            print(f"\ntried and failed with: {e}\n")
+            m = (
+                fail_print_message_builder()
+                if fail_print_message_builder is not None
+                else ""
+            )
+            print(f"\ntried and failed with: {e}\n{m}\n")
             traceback.print_exc(file=sys.stderr)
         if reraise:
             raise e
-        if fail_message_builder is not None:
-            return fail_message_builder(error=e, sys_stderr=sys.stderr)
+        if fail_return_message_builder is not None:
+            return fail_return_message_builder(error=e, sys_stderr=sys.stderr)
         else:
             return default
 
