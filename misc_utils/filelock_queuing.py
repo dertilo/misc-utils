@@ -169,6 +169,7 @@ class FileBasedWorker:
     wait_even_though_queue_is_empty: bool = True
 
     def run(self):
+        print(f"worker for {self.queue_dir=}")
         job_queue = FileBasedJobQueue(queue_dir=self.queue_dir)
         job_queue.build()
 

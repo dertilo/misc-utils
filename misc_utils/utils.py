@@ -30,6 +30,7 @@ def just_try(
     default: T_default = None,
     reraise: bool = False,
     verbose: bool = False,
+    print_stacktrace: bool = True,
     fail_return_message_builder: Optional[Callable[..., Any]] = None,
     fail_print_message_builder: Optional[Callable[..., Any]] = None,
 ) -> Union[T, T_default]:
@@ -43,7 +44,7 @@ def just_try(
                 else ""
             )
             print(f"\ntried and failed with: {e}\n{m}\n")
-            if fail_print_message_builder is None:
+            if print_stacktrace:
                 traceback.print_exc(file=sys.stderr)
         if reraise:
             raise e

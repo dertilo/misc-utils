@@ -21,6 +21,7 @@ from misc_utils.dataclass_utils import (
     all_undefined_must_be_filled,
     hash_dataclass,
     remove_if_exists,
+    serialize_dataclass,
 )
 from misc_utils.prefix_suffix import PrefixSuffix
 from misc_utils.utils import Singleton, claim_write_access, just_try
@@ -72,7 +73,12 @@ class CachedData(Buildable, ABC):
             os.makedirs(str(self.cache_base), exist_ok=True)
 
         if got_cache_dir and got_a_cache_base:
-            assert str(self.cache_dir).startswith(str(self.cache_base))
+            assert isinstance(self.cache_dir, PrefixSuffix) and isinstance(
+                self.cache_base, PrefixSuffix
+            )
+            assert str(self.cache_dir).startswith(
+                str(self.cache_base)
+            ), f"{self.cache_dir=} does not startswith {self.cache_base=}"
 
     @property
     def _is_ready(self) -> bool:
@@ -89,7 +95,9 @@ class CachedData(Buildable, ABC):
     def _found_and_loaded_from_cache(self):
 
         if self._found_dataclass_json():
-            self._load_cached()
+            self._load_cached()  # TODO: to be removed
+            self._load_cached_data()
+            self._post_build_setup()
             # print(
             #     f"LOADED cached: {self.name} ({self.__class__.__name__}) from {self.cache_dir}"
             # )
@@ -150,15 +158,29 @@ class CachedData(Buildable, ABC):
             ), f"env-var NO_BUILD is set but {self.__class__.__name__} did not find {self.dataclass_json=}"
         return should_build_cache
 
+    def _post_build_setup(self):
+        """
+        use this to prepare stuff, last step in build_or_load, called after build_cache and _load_cached_data
+        """
+        pass
+
+    def _load_cached_data(self):
+        """
+        just called when cache was found
+        """
+        pass
+
     def _load_cached(self) -> None:
+        # TODO: to be removed! use _load_cached_data and _post_build_setup
         # not loading persistable_state_fields+complete datum here!
         # is everybodys own responsibility! -> why?
         # if I can persist it I am able to deserialize it!
+        # but I should not deserialize stuff that is already in (python) memory!
         just_try(
             lambda: self._load_state_fields(),
             reraise=True,
             verbose=True,
-            fail_print_message_builder=lambda: f"could not _load_state_fields for {self=}",
+            fail_print_message_builder=lambda: f"could not _load_state_fields for {type(self).__name__=}",
         )
 
     @beartype
@@ -198,22 +220,33 @@ class CachedData(Buildable, ABC):
                 f"{self.dataclass_json}.lock"
             )  # failed attempt to claim lock may still create lock-file!
             assert self._found_dataclass_json(), f"{self.dataclass_json=} must exist!"
+            start = time()
+            self._load_cached_data()
+            duration = time() - start
+            if duration >= 1.0:
+                print(
+                    f"LOADED cached: {self.name} ({self.__class__.__name__}) took: {duration} seconds from {self.cache_dir}"
+                )
 
         start = time()
-        self._load_cached()
+        self._load_cached()  # TODO: remove use _load_cached_data and _post_build_setup
+        self._post_build_setup()
         duration = time() - start
         if duration >= 1.0:
             print(
-                f"LOADED cached: {self.name} ({self.__class__.__name__}) took: {duration} seconds from {self.cache_dir}"
+                f"SETUP: {self.name} ({self.__class__.__name__}) took: {duration} seconds from {self.cache_dir}"
             )
 
     def _load_state_fields(self):
-        loaded_dc = deserialize_dataclass(read_file(self.dataclass_json))
-        state_fields = list(
-            f for f in dataclasses.fields(self) if (not f.init and f.repr)
-        )
-        for f in state_fields:
+        cache_data_json = read_file(self.dataclass_json)
+        loaded_dc = deserialize_dataclass(cache_data_json)
+        repr_fields = list(f for f in dataclasses.fields(self) if f.repr)
+        for f in repr_fields:
             setattr(self, f.name, getattr(loaded_dc, f.name))
+        # TODO: why was I not loading input fields in the past?
+        assert hash_dataclass(self) == hash_dataclass(
+            loaded_dc
+        ), f"{self=}!={loaded_dc=}"
 
     def create_cache_dir_from_hashed_self(self) -> PrefixSuffix:
         all_undefined_must_be_filled(self)

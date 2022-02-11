@@ -46,11 +46,13 @@ def _just_for_backward_compatibility(path):
     # TODO: just for backward compatibility
     if isinstance(path, str):
         assert path.startswith(
-            BASE_PATHES["work_dir"]
-        ), f"{path=} does not startswith {BASE_PATHES['work_dir']}"
+            BASE_PATHES["base_path"]
+        ), f"{path=} does not startswith {BASE_PATHES['base_path']}"
         PrefixSuffix_clazz = getattr(prefix_suffix_module, "PrefixSuffix")
 
-        return PrefixSuffix_clazz("work_dir", path.replace(BASE_PATHES["work_dir"], ""))
+        return PrefixSuffix_clazz(
+            "base_path", path.replace(BASE_PATHES["base_path"], "")
+        )
     else:
         return path
 
@@ -68,6 +70,7 @@ def shallow_dataclass_from_dict(cls, dct: dict):
     }
     # TODO: WTF!
     if "cache_base" in kwargs:
+        print(f"need to fix {kwargs['cache_base']=} of {cls.__name__}")
         kwargs["cache_base"] = _just_for_backward_compatibility(kwargs["cache_base"])
         kwargs["cache_dir"] = _just_for_backward_compatibility(kwargs["cache_dir"])
 
@@ -75,7 +78,7 @@ def shallow_dataclass_from_dict(cls, dct: dict):
         lambda: cls(**kwargs),
         reraise=True,
         verbose=True,
-        fail_print_message_builder=lambda: f"fail class: {cls=}\n{dct=}\n{kwargs=}",
+        fail_print_message_builder=lambda: f"fail class: {cls.__name__=}",
     )
     set_noninit_fields(cls, dct, obj)
     return obj
@@ -300,7 +303,7 @@ def _json_loads_decode_dataclass(s: str):
         lambda: json.loads(s, cls=MyDecoder),
         reraise=True,
         verbose=True,
-        fail_print_message_builder=lambda: f"failed to decode: {s=}",
+        fail_print_message_builder=lambda: f"failed to decode: {s[:1000]=}",
     )
 
 
