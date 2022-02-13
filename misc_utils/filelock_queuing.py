@@ -34,14 +34,9 @@ filelock works on nfs? https://github.com/tox-dev/py-filelock/issues/73
 
 @dataclass
 class _POISONPILL_TASK(metaclass=Singleton):
-    pass
-
     @property
     def name(self):
         return self.__class__.__name__
-
-    def _is_ready(self):
-        return False
 
     def _found_and_loaded_from_cache(self):
         return True
@@ -194,10 +189,10 @@ class FileBasedWorker:
         while True:
             job: Optional[FileBasedJob] = job_queue.get()
             if job is not None:
-                if job.task is POISONPILL_TASK:
+                got_poisoned = self._process_job(job, job_queue)
+                if got_poisoned:
                     print(f"got poisoned")
                     break
-                self._process_job(job, job_queue)
                 idle_counter = 0
             else:
                 idle_counter += 1
@@ -212,9 +207,13 @@ class FileBasedWorker:
 
     def _process_job(self, job, job_queue):
         error = None
+        got_poisoned = False
 
         try:
             buildable = deserialize_dataclass(job.task)
+            if buildable is POISONPILL_TASK:
+                got_poisoned = True
+                return got_poisoned
             print(f"doing {job.id}")
             job.task = serialize_dataclass(buildable.build())
         except Exception as e:
@@ -232,3 +231,4 @@ class FileBasedWorker:
             job_queue.done(job)
             if error is not None and self.stop_on_error:
                 raise error
+        return got_poisoned

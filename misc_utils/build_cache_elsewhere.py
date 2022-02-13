@@ -4,7 +4,7 @@ from abc import abstractmethod
 from abc import abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Union, TypeVar, Generic, ClassVar, Iterable, Iterator
+from typing import Any, Union, TypeVar, Generic, ClassVar, Iterable, Iterator, Optional
 
 import sys
 from time import sleep
@@ -13,13 +13,20 @@ from misc_utils.buildable import Buildable
 from misc_utils.cached_data import CachedData
 from misc_utils.dataclass_utils import (
     UNDEFINED,
-    _UNDEFINED, hash_dataclass, serialize_dataclass,
+    _UNDEFINED,
+    hash_dataclass,
+    serialize_dataclass,
 )
-from misc_utils.filelock_queuing import _POISONPILL_TASK, FileBasedJobQueue, \
-    FileBasedJob
+from misc_utils.filelock_queuing import (
+    _POISONPILL_TASK,
+    FileBasedJobQueue,
+    FileBasedJob,
+    POISONPILL_TASK,
+)
 from misc_utils.prefix_suffix import PrefixSuffix
 
 T = TypeVar("T")
+
 
 @dataclass
 class BuildCacheElseWhere(Buildable):  # Generic[T]
@@ -37,10 +44,13 @@ class BuildCacheElseWhere(Buildable):  # Generic[T]
         """
         always returns True to prevent triggering build of children
         """
-        task_is_ready = self.task._is_ready
+        task_is_ready = not self.task is POISONPILL_TASK and self.task._is_ready
         # self.callback_dir=f"{self.queue_dir}_{uuid.uuid4()}"
         if not task_is_ready:
+            print(f"putting {self.task.name=} in queue")
             self._put_task_in_queue()
+        else:
+            print(f"{self.task.name=} is ready!")
         return True
 
     @abstractmethod
@@ -71,6 +81,7 @@ class BuildCacheElseWhere(Buildable):  # Generic[T]
 
 @dataclass
 class FileLockQueuedCacheBuilder(BuildCacheElseWhere):
+    rank: Optional[int] = None
     queue_dir: Union[_UNDEFINED, PrefixSuffix] = UNDEFINED
 
     def __post_init__(self):
@@ -78,7 +89,12 @@ class FileLockQueuedCacheBuilder(BuildCacheElseWhere):
         self.task_hash = hash_dataclass(self.task)
 
     def _put_task_in_queue(self):
-        rank = round((datetime.now() - datetime(2022, 1, 1, 0, 0, 0)).total_seconds())
+        if self.rank is None:
+            rank = round(
+                (datetime.now() - datetime(2022, 1, 1, 0, 0, 0)).total_seconds()
+            )
+        else:
+            rank = self.rank
         self.job = FileBasedJob(
             id=f"job-{self.task_hash}",
             task=serialize_dataclass(self.task),
@@ -109,11 +125,12 @@ class ParallelFileLockQueuedCacheBuilding(Buildable, Iterable[T]):
         """
         self.tasks = [
             FileLockQueuedCacheBuilder(
+                index=k,
                 task=task,
                 queue_dir=self.queue_dir,
                 teardown_sleep_time=self.teardown_sleep_time,
             )
-            for task in self.tasks
+            for k, task in enumerate(self.tasks)
         ]
 
     def _build_self(self):
