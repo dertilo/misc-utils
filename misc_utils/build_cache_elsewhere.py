@@ -1,8 +1,10 @@
+import dataclasses
 import itertools
 from abc import abstractmethod
 from abc import abstractmethod
 from dataclasses import dataclass
-from typing import Any, Union, TypeVar, Generic, ClassVar
+from datetime import datetime
+from typing import Any, Union, TypeVar, Generic, ClassVar, Iterable, Iterator
 
 import sys
 from time import sleep
@@ -11,9 +13,13 @@ from misc_utils.buildable import Buildable
 from misc_utils.cached_data import CachedData
 from misc_utils.dataclass_utils import (
     UNDEFINED,
-    _UNDEFINED,
+    _UNDEFINED, hash_dataclass, serialize_dataclass,
 )
+from misc_utils.filelock_queuing import _POISONPILL_TASK, FileBasedJobQueue, \
+    FileBasedJob
+from misc_utils.prefix_suffix import PrefixSuffix
 
+T = TypeVar("T")
 
 @dataclass
 class BuildCacheElseWhere(Buildable):  # Generic[T]
@@ -21,7 +27,7 @@ class BuildCacheElseWhere(Buildable):  # Generic[T]
     elsewhere != mainprocess!
     """
 
-    task: Union[_UNDEFINED, CachedData] = UNDEFINED
+    task: Union[_UNDEFINED, CachedData, _POISONPILL_TASK] = UNDEFINED
     teardown_sleep_time: float = 1.0
 
     # callback_dir: str = dataclasses.field(init=False, repr=False)
@@ -61,3 +67,68 @@ class BuildCacheElseWhere(Buildable):  # Generic[T]
                 sleep(self.teardown_sleep_time)
 
         return super()._tear_down_self()
+
+
+@dataclass
+class FileLockQueuedCacheBuilder(BuildCacheElseWhere):
+    queue_dir: Union[_UNDEFINED, PrefixSuffix] = UNDEFINED
+
+    def __post_init__(self):
+        self.queue: FileBasedJobQueue = FileBasedJobQueue(self.queue_dir).build()
+        self.task_hash = hash_dataclass(self.task)
+
+    def _put_task_in_queue(self):
+        rank = round((datetime.now() - datetime(2022, 1, 1, 0, 0, 0)).total_seconds())
+        self.job = FileBasedJob(
+            id=f"job-{self.task_hash}",
+            task=serialize_dataclass(self.task),
+            rank=rank,
+        )
+        self.queue.put(self.job)
+
+    # TODO: overriding like this prevented loading the cache, no silent failing, someone else should catch the exception!
+    # def task_is_done(self):
+    #     """
+    #     even if failed considered as done -> someone else handle fail-case later!
+    #     """
+    #     job_done_file_exists = os.path.isfile(self.job.job_file(self.queue.done_dir))
+    #     return job_done_file_exists
+
+
+@dataclass
+class ParallelFileLockQueuedCacheBuilding(Buildable, Iterable[T]):
+    tasks: list[T] = dataclasses.field(init=True, repr=True)
+    queue_dir: Union[_UNDEFINED, PrefixSuffix] = UNDEFINED
+    teardown_sleep_time: float = 10.0
+
+    # flq_tasks: list[T] = dataclasses.field(init=False, repr=False)
+
+    def __post_init__(self):
+        """
+        packing/wrapping tasks within FileLockQueuedCacheBuilder
+        """
+        self.tasks = [
+            FileLockQueuedCacheBuilder(
+                task=task,
+                queue_dir=self.queue_dir,
+                teardown_sleep_time=self.teardown_sleep_time,
+            )
+            for task in self.tasks
+        ]
+
+    def _build_self(self):
+        for k, task in enumerate(self.tasks):
+            self.tasks[k] = task.build()
+
+        self._tear_down()
+
+    def _tear_down_all_chrildren(self):
+        self.tasks = [x._tear_down() for x in self.tasks]
+
+    def __iter__(self) -> Iterator[T]:
+        """
+        unpacking task of type T from FileLockQueuedCacheBuilder
+        """
+        self.tasks: Iterable[FileLockQueuedCacheBuilder]
+        for flq_task in self.tasks:
+            yield flq_task.task

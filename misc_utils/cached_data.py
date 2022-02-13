@@ -219,7 +219,15 @@ class CachedData(Buildable, ABC):
             remove_if_exists(
                 f"{self.dataclass_json}.lock"
             )  # failed attempt to claim lock may still create lock-file!
-            assert self._found_dataclass_json(), f"{self.dataclass_json=} must exist!"
+            does_exist = False
+            for _ in range(3):
+                if self._found_dataclass_json():
+                    does_exist = True
+                    break
+                else:
+                    sleep(1.0)
+
+            assert does_exist, f"{self.dataclass_json=} must exist!"
             start = time()
             self._load_cached_data()
             duration = time() - start

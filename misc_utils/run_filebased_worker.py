@@ -11,8 +11,8 @@ if __name__ == "__main__":
     BASE_PATHES["base_path"] = base_path
     cache_root = f"{base_path}/data/cache"
     BASE_PATHES["cache_root"] = cache_root
-    BASE_PATHES["nix"]=""
+    BASE_PATHES["nix"] = ""
     FileBasedWorker(
-        #TODO: why PrefixSuffix here?
-        queue_dir=PrefixSuffix("nix", queue_dir)
+        # TODO: why PrefixSuffix here?
+        queue_dir=PrefixSuffix("nix", queue_dir),
     ).run()

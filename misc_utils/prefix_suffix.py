@@ -17,7 +17,7 @@ class PrefixSuffix(Buildable):
 
     def __set_prefix(self):
         self.prefix = BASE_PATHES[self.prefix_key]
-        assert len(self.prefix) > 0, f"base_path is empty!"
+        # assert len(self.prefix) > 0, f"base_path is empty!"
 
     def _build_self(self) -> Any:
         """

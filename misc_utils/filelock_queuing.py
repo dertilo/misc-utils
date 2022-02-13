@@ -1,29 +1,24 @@
-import dataclasses
 import json
 import os
 import traceback
 from dataclasses import asdict, dataclass
-from datetime import datetime
 from pathlib import Path
-from typing import Optional, Callable, Any, TypeVar, Union, Iterable, Iterator
+from typing import Optional, Callable, Any, TypeVar
 
 import sys
+
 from beartype import beartype
-from filelock import FileLock
+from filelock import FileLock, Timeout
 from time import sleep
 
 from data_io.readwrite_files import read_file, write_file, write_json
-from misc_utils.build_cache_elsewhere import BuildCacheElseWhere
-from misc_utils.buildable import Buildable, BuildableList
-from misc_utils.cached_data import CachedData
+from misc_utils.buildable import Buildable
 from misc_utils.dataclass_utils import (
     serialize_dataclass,
     deserialize_dataclass,
-    UNDEFINED,
-    _UNDEFINED,
-    hash_dataclass,
 )
 from misc_utils.prefix_suffix import PrefixSuffix
+from misc_utils.utils import Singleton
 
 T = TypeVar("T")
 
@@ -35,6 +30,24 @@ filelock works on nfs? https://github.com/tox-dev/py-filelock/issues/73
 # class BuildCacheJob:
 #     callback_dir: str
 #     serialized_dataclass: str
+
+
+@dataclass
+class _POISONPILL_TASK(metaclass=Singleton):
+    pass
+
+    @property
+    def name(self):
+        return self.__class__.__name__
+
+    def _is_ready(self):
+        return False
+
+    def _found_and_loaded_from_cache(self):
+        return True
+
+
+POISONPILL_TASK = _POISONPILL_TASK()
 
 
 @dataclass
@@ -71,16 +84,18 @@ def consume_file(
                 break
             else:
                 continue
-
-        with FileLock(f"{file}.lock", timeout=0.1):
-            if os.path.isfile(file):
-                content = read_file(file)
-                os.remove(file)
-                os.remove(f"{file}.lock")
-                break
-            else:
-                if os.path.isfile(f"{file}.lock"):
+        try:
+            with FileLock(f"{file}.lock", timeout=1.0):
+                if os.path.isfile(file):
+                    content = read_file(file)
+                    os.remove(file)
                     os.remove(f"{file}.lock")
+                    break
+                else:
+                    if os.path.isfile(f"{file}.lock"):
+                        os.remove(f"{file}.lock")
+        except Timeout:
+            print(f"could  not consume file: {file}")
         # if content is None:
         #     print(f"failed to consume file!")
         #     sleep(3)
@@ -179,6 +194,9 @@ class FileBasedWorker:
         while True:
             job: Optional[FileBasedJob] = job_queue.get()
             if job is not None:
+                if job.task is POISONPILL_TASK:
+                    print(f"got poisoned")
+                    break
                 self._process_job(job, job_queue)
                 idle_counter = 0
             else:
@@ -214,63 +232,3 @@ class FileBasedWorker:
             job_queue.done(job)
             if error is not None and self.stop_on_error:
                 raise error
-
-
-@dataclass
-class FileLockQueuedCacheBuilder(BuildCacheElseWhere):
-    queue_dir: Union[_UNDEFINED, PrefixSuffix] = UNDEFINED
-
-    def __post_init__(self):
-        self.queue: FileBasedJobQueue = FileBasedJobQueue(self.queue_dir).build()
-        self.task_hash = hash_dataclass(self.task)
-
-    def _put_task_in_queue(self):
-        rank = round((datetime.now() - datetime(2022, 1, 1, 0, 0, 0)).total_seconds())
-        self.job = FileBasedJob(
-            id=f"job-{self.task_hash}",
-            task=serialize_dataclass(self.task),
-            rank=rank,
-        )
-        self.queue.put(self.job)
-
-    # TODO: overriding like this prevented loading the cache, no silent failing, someone else should catch the exception!
-    # def task_is_done(self):
-    #     """
-    #     even if failed considered as done -> someone else handle fail-case later!
-    #     """
-    #     job_done_file_exists = os.path.isfile(self.job.job_file(self.queue.done_dir))
-    #     return job_done_file_exists
-
-
-@dataclass
-class ParallelFileLockQueuedCacheBuilding(Buildable, Iterable[T]):
-    tasks: list[T] = dataclasses.field(init=True, repr=True)
-    queue_dir: Union[_UNDEFINED, PrefixSuffix] = UNDEFINED
-
-    # flq_tasks: list[T] = dataclasses.field(init=False, repr=False)
-
-    def __post_init__(self):
-        """
-        packing/wrapping tasks within FileLockQueuedCacheBuilder
-        """
-        self.tasks = [
-            FileLockQueuedCacheBuilder(task=task, queue_dir=self.queue_dir)
-            for task in self.tasks
-        ]
-
-    def _build_self(self):
-        for k, task in enumerate(self.tasks):
-            self.tasks[k] = task.build()
-
-        self._tear_down()
-
-    def _tear_down_all_chrildren(self):
-        self.tasks = [x._tear_down() for x in self.tasks]
-
-    def __iter__(self) -> Iterator[T]:
-        """
-        unpacking task of type T from FileLockQueuedCacheBuilder
-        """
-        self.tasks: Iterable[FileLockQueuedCacheBuilder]
-        for flq_task in self.tasks:
-            yield flq_task.task

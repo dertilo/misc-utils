@@ -4,9 +4,7 @@ import sys
 
 from misc_utils.prefix_suffix import BASE_PATHES
 from misc_utils.dummy_task import DummyTask
-from misc_utils.filelock_queuing import (
-    FileLockQueuedCacheBuilder,
-)
+from misc_utils.build_cache_elsewhere import FileLockQueuedCacheBuilder
 
 if __name__ == "__main__":
 
