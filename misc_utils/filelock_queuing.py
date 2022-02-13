@@ -233,12 +233,13 @@ class FileLockQueuedCacheBuilder(BuildCacheElseWhere):
         )
         self.queue.put(self.job)
 
-    def task_is_done(self):
-        """
-        even if failed considered as done -> someone else handle fail-case later!
-        """
-        job_done_file_exists = os.path.isfile(self.job.job_file(self.queue.done_dir))
-        return job_done_file_exists
+    # TODO: overriding like this prevented loading the cache, no silent failing, someone else should catch the exception!
+    # def task_is_done(self):
+    #     """
+    #     even if failed considered as done -> someone else handle fail-case later!
+    #     """
+    #     job_done_file_exists = os.path.isfile(self.job.job_file(self.queue.done_dir))
+    #     return job_done_file_exists
 
 
 @dataclass

@@ -6,6 +6,7 @@ import json
 import os
 import re
 import shutil
+import uuid
 from dataclasses import dataclass
 from hashlib import sha1
 from typing import Any, Dict, TypeVar, Union, Optional
@@ -14,6 +15,7 @@ import omegaconf
 from beartype import beartype
 from omegaconf import OmegaConf
 
+from data_io.readwrite_files import write_file
 from misc_utils.base64_utils import Base64Decoder
 from misc_utils.beartypes import Dataclass, NeStr
 from misc_utils.utils import Singleton, just_try
@@ -45,6 +47,7 @@ def _just_for_backward_compatibility(path):
     BASE_PATHES = prefix_suffix_module.BASE_PATHES
     # TODO: just for backward compatibility
     if isinstance(path, str):
+        print(f"need to fix {path=}")
         assert path.startswith(
             BASE_PATHES["base_path"]
         ), f"{path=} does not startswith {BASE_PATHES['base_path']}"
@@ -70,7 +73,6 @@ def shallow_dataclass_from_dict(cls, dct: dict):
     }
     # TODO: WTF!
     if "cache_base" in kwargs:
-        print(f"need to fix {kwargs['cache_base']=} of {cls.__name__}")
         kwargs["cache_base"] = _just_for_backward_compatibility(kwargs["cache_base"])
         kwargs["cache_dir"] = _just_for_backward_compatibility(kwargs["cache_dir"])
 
@@ -78,6 +80,7 @@ def shallow_dataclass_from_dict(cls, dct: dict):
         lambda: cls(**kwargs),
         reraise=True,
         verbose=True,
+        print_stacktrace=False,
         fail_print_message_builder=lambda: f"fail class: {cls.__name__=}",
     )
     set_noninit_fields(cls, dct, obj)
@@ -175,8 +178,8 @@ class MyCustomEncoder(json.JSONEncoder):
                 module = file_path.strip("/").replace("/", ".")
             _target_ = f"{module}.{obj.__class__.__name__}"
             self.maybe_append(result, self.class_reference_key, _target_)
-            self.maybe_append(result, IDKEY, id(obj))
-            # Get values of its fields (recursively).
+            self.maybe_append(result, IDKEY, f"{uuid.uuid1()}")
+
             def exclude_for_hash(o, f_name: str) -> bool:
                 if self.encode_for_hash and hasattr(o, "__exclude_from_hash__"):
                     return f_name in o.__exclude_from_hash__
@@ -269,6 +272,11 @@ class MyDecoder(json.JSONDecoder):
 
                 if eid in object_registry.keys():
                     o = object_registry[eid]
+                    serialized_dc = serialize_dataclass(o, skip_keys=[IDKEY])
+                    json_dups_dct = serialize_dataclass(dct, skip_keys=[IDKEY])
+                    assert (
+                        serialized_dc == json_dups_dct
+                    ), f"clashing _id_s, {eid=}\n{serialized_dc}\n{json_dups_dct} "
                 else:
                     o = instantiate_via_importlib(dct, class_key)
                     # if eid is not None:
@@ -298,12 +306,16 @@ def to_dict(o) -> Dict:
 
 @beartype
 def _json_loads_decode_dataclass(s: str):
+    def fail_fun():
+        write_file("failed_to_decode.json", s)
+        f"failed to decode: {s[:1000]=}"
+
     # TODO: just_try just for debugging
     return just_try(
         lambda: json.loads(s, cls=MyDecoder),
         reraise=True,
         verbose=True,
-        fail_print_message_builder=lambda: f"failed to decode: {s[:1000]=}",
+        fail_print_message_builder=fail_fun,
     )
 
 
