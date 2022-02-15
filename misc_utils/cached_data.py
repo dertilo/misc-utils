@@ -43,6 +43,13 @@ class _CREATE_CACHE_DIR_IN_BASE_DIR(metaclass=Singleton):
 CREATE_CACHE_DIR_IN_BASE_DIR = _CREATE_CACHE_DIR_IN_BASE_DIR()
 
 
+def remove_make_dir(dirr):
+    shutil.rmtree(dirr, ignore_errors=True)
+    os.makedirs(
+        dirr
+    )  # TODO: WTF! this sometimes failes cause it does not get that directory was removed! some state is not flushed
+
+
 @dataclass
 class CachedData(Buildable, ABC):
     # str for backward compatibility
@@ -70,12 +77,15 @@ class CachedData(Buildable, ABC):
         assert got_a_cache_base or got_cache_dir, f"{self.__class__}"
 
         if got_a_cache_base:
+            assert isinstance(
+                self.cache_base, PrefixSuffix
+            ), f"{self.cache_base=} is not instance of PrefixSuffix"
             os.makedirs(str(self.cache_base), exist_ok=True)
 
         if got_cache_dir and got_a_cache_base:
-            assert isinstance(self.cache_dir, PrefixSuffix) and isinstance(
-                self.cache_base, PrefixSuffix
-            )
+            assert isinstance(
+                self.cache_dir, PrefixSuffix
+            ), f"{self.cache_dir=} is not instance of PrefixSuffix"
             assert str(self.cache_dir).startswith(
                 str(self.cache_base)
             ), f"{self.cache_dir=} does not startswith {self.cache_base=}"
@@ -190,8 +200,7 @@ class CachedData(Buildable, ABC):
 
         if self._claimed_right_to_build_cache():
             cadi = str(self.cache_dir)
-            shutil.rmtree(cadi, ignore_errors=True)
-            os.makedirs(cadi)
+            remove_make_dir(cadi)
             error = None
             try:
                 start = time()
@@ -257,6 +266,9 @@ class CachedData(Buildable, ABC):
         ), f"{self=}!={loaded_dc=}"
 
     def create_cache_dir_from_hashed_self(self) -> PrefixSuffix:
+        assert isinstance(
+            self.cache_base, PrefixSuffix
+        ), f"{self.name},({type(self).__name__})"
         all_undefined_must_be_filled(self)
         hashed_self = hash_dataclass(self)
         typed_self = type(self).__name__

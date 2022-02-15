@@ -1,5 +1,6 @@
 import json
 import os
+import random
 import traceback
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -18,7 +19,7 @@ from misc_utils.dataclass_utils import (
     deserialize_dataclass,
 )
 from misc_utils.prefix_suffix import PrefixSuffix
-from misc_utils.utils import Singleton
+from misc_utils.utils import Singleton, retry
 
 T = TypeVar("T")
 
@@ -90,7 +91,8 @@ def consume_file(
                     if os.path.isfile(f"{file}.lock"):
                         os.remove(f"{file}.lock")
         except Timeout:
-            print(f"could  not consume file: {file}")
+            sleep(random.uniform(0.5, 1))
+            print(f"could not consume file: {file}")
         # if content is None:
         #     print(f"failed to consume file!")
         #     sleep(3)
@@ -139,6 +141,7 @@ class FileBasedJobQueue(Buildable):
             return timestamp_seconds
 
         def get_fifo_file():
+            sleep(random.uniform(0.1, 1))
             job_files = [p for p in Path(self.todo_dir).glob("*.json")]
             job_files = [
                 str(p)
@@ -175,11 +178,14 @@ class FileBasedJobQueue(Buildable):
 @dataclass
 class FileBasedWorker:
     queue_dir: PrefixSuffix
+    worker_name: str = "noname"
     stop_on_error: bool = False
     wait_even_though_queue_is_empty: bool = True
 
     def run(self):
         print(f"worker for {self.queue_dir=}")
+        # wandb.init(project="asr-inference", name=f"{self.row=}-{self.col=}")
+
         job_queue = FileBasedJobQueue(queue_dir=self.queue_dir)
         job_queue.build()
 
@@ -214,8 +220,7 @@ class FileBasedWorker:
             if buildable is POISONPILL_TASK:
                 got_poisoned = True
                 return got_poisoned
-            print(f"doing {job.id}")
-            job.task = serialize_dataclass(buildable.build())
+            retry(lambda: self._doing_job(job), num_retries=3, wait_time=1.0)
         except Exception as e:
             print(f"{job.id} FAILED!!! with {e}")
             traceback.print_exc()
@@ -232,3 +237,8 @@ class FileBasedWorker:
             if error is not None and self.stop_on_error:
                 raise error
         return got_poisoned
+
+    def _doing_job(self, job):
+        buildable = deserialize_dataclass(job.task)
+        print(f"doing {job.id}")
+        job.task = serialize_dataclass(buildable.build())

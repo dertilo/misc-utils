@@ -125,7 +125,7 @@ class ParallelFileLockQueuedCacheBuilding(Buildable, Iterable[T]):
         """
         self.tasks = [
             FileLockQueuedCacheBuilder(
-                index=k,
+                rank=k,
                 task=task,
                 queue_dir=self.queue_dir,
                 teardown_sleep_time=self.teardown_sleep_time,

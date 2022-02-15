@@ -1,8 +1,7 @@
-from typing import Generator, Iterator, ContextManager
+from typing import ContextManager
 
 import os
 from contextlib import contextmanager
-from time import sleep
 
 from beartype import beartype
 from selenium import webdriver
@@ -53,36 +52,6 @@ def enter_keyboard_input(
     e.send_keys(keyboard_input)
     if press_enter:
         e.send_keys(Keys.ENTER)
-
-
-def retry(
-    fun,
-    num_retries=3,
-    wait_time=1.0,
-    increase_wait_time=False,
-    do_raise=True,
-    default=None,
-    fail_message=None,
-):
-    exception = None
-    for k in range(num_retries):
-        try:
-            return fun()
-        except Exception as e:
-            exception = e
-            print(f"\n{exception=}\n")
-            if increase_wait_time:
-                waiting_time = wait_time * 2 ** k
-            else:
-                waiting_time = wait_time
-            sleep(waiting_time)
-    print(f"retry failed {num_retries} times!")
-    if do_raise:
-        if fail_message:
-            print(fail_message)
-        raise exception
-    else:
-        return default
 
 
 def click_it(wd, xpath):
