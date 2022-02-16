@@ -18,12 +18,13 @@ from misc_utils.dataclass_utils import (
     encode_dataclass,
     _UNDEFINED,
 )
-
+from misc_utils.prefix_suffix import PrefixSuffix
 
 classes_black_list = [
     _CREATE_CACHE_DIR_IN_BASE_DIR.__name__,
     _IGNORE_THIS_USE_CACHE_DIR.__name__,
     _UNDEFINED.__name__,
+    PrefixSuffix.__name__,
 ]
 
 

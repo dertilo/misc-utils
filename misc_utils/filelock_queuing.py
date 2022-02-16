@@ -220,7 +220,12 @@ class FileBasedWorker:
             if buildable is POISONPILL_TASK:
                 got_poisoned = True
                 return got_poisoned
-            retry(lambda: self._doing_job(job), num_retries=3, wait_time=1.0)
+            retry(
+                lambda: self._doing_job(job),
+                num_retries=5,
+                wait_time=1.0,
+                increase_wait_time=True,
+            )
         except Exception as e:
             print(f"{job.id} FAILED!!! with {e}")
             traceback.print_exc()

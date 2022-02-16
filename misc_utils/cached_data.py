@@ -100,6 +100,11 @@ class CachedData(Buildable, ABC):
         if not is_ready:
             is_ready = self._found_and_loaded_from_cache()
 
+        new_cache_root = os.environ.get("EXPORT_CACHE_ROOT", None)
+        if new_cache_root is not None:
+            os.environ["NO_BUILD"] = "True"
+            is_ready = False
+
         return is_ready
 
     def _found_and_loaded_from_cache(self):
@@ -118,11 +123,13 @@ class CachedData(Buildable, ABC):
         return successfully_loaded_cached
 
     @property
+    @abstractmethod
     def name(self):
         """
         just to increase cached-data "readability", this is no id! no need to be "unique"
+        enforcing this! readability is user-friendly!
         """
-        return ""
+        raise NotImplementedError
 
     def prefix_cache_dir(self, path: str) -> str:
         assert isinstance(
@@ -136,7 +143,16 @@ class CachedData(Buildable, ABC):
         raise NotImplementedError
 
     def _build_self(self):
-        self.build_or_load()
+        self.maybe_build_cache()
+
+        start = time()
+        self._load_cached()  # TODO: remove use _load_cached_data and _post_build_setup
+        self._post_build_setup()
+        duration = time() - start
+        if duration >= 1.0:
+            print(
+                f"SETUP: {self.name} ({self.__class__.__name__}) took: {duration} seconds from {self.cache_dir}"
+            )
 
     def _prepare(self, cache_dir: str) -> None:
         pass
@@ -172,7 +188,12 @@ class CachedData(Buildable, ABC):
         """
         use this to prepare stuff, last step in build_or_load, called after build_cache and _load_cached_data
         """
-        pass
+        new_cache_root = os.environ.get("EXPORT_CACHE_ROOT", None)
+        if new_cache_root is not None:
+            print(f"copy {str(self.cache_dir)} to {new_cache_root}")
+            shutil.copytree(
+                str(self.cache_dir), f"{new_cache_root}/{self.cache_dir.suffix}"
+            )
 
     def _load_cached_data(self):
         """
@@ -194,7 +215,7 @@ class CachedData(Buildable, ABC):
         )
 
     @beartype
-    def build_or_load(
+    def maybe_build_cache(
         self,
     ) -> None:
 
@@ -203,15 +224,15 @@ class CachedData(Buildable, ABC):
             remove_make_dir(cadi)
             error = None
             try:
-                start = time()
-                sys.stdout.write(
-                    f"building CACHE {self.name} ({self.__class__.__name__}) by {multiprocessing.current_process().name}"
-                )
+                # start = time()
+                # sys.stdout.write(
+                #     f"building CACHE {self.name} ({self.__class__.__name__}) by {multiprocessing.current_process().name}"
+                # )
                 self._build_cache()
-                sys.stdout.write(
-                    f"{self.name} took: {time()-start} secs; in cache-dir: {cadi} \n"
-                )
-                sys.stdout.flush()
+                # sys.stdout.write(
+                #     f"{self.name} took: {time()-start} secs; in cache-dir: {cadi} \n"
+                # )
+                # sys.stdout.flush()
 
                 write_json(self.dataclass_json, encode_dataclass(self), do_flush=True)
                 # sleep(1) # TODO:  WTF! sleep here seems to alleviate problem with multiprocessing
@@ -228,7 +249,7 @@ class CachedData(Buildable, ABC):
             remove_if_exists(
                 f"{self.dataclass_json}.lock"
             )  # failed attempt to claim lock may still create lock-file!
-            does_exist = False
+            does_exist = False  # TODO wtf!
             for _ in range(3):
                 if self._found_dataclass_json():
                     does_exist = True
@@ -244,15 +265,6 @@ class CachedData(Buildable, ABC):
                 print(
                     f"LOADED cached: {self.name} ({self.__class__.__name__}) took: {duration} seconds from {self.cache_dir}"
                 )
-
-        start = time()
-        self._load_cached()  # TODO: remove use _load_cached_data and _post_build_setup
-        self._post_build_setup()
-        duration = time() - start
-        if duration >= 1.0:
-            print(
-                f"SETUP: {self.name} ({self.__class__.__name__}) took: {duration} seconds from {self.cache_dir}"
-            )
 
     def _load_state_fields(self):
         cache_data_json = read_file(self.dataclass_json)

@@ -233,6 +233,7 @@ class MyCustomEncoder(json.JSONEncoder):
                     self._asdict_inner(v, dict_factory),
                 )
                 for k, v in obj.items()
+                if self.skip_keys is None or k not in self.skip_keys
             )
         elif callable(obj):
             return inspect.getsource(
