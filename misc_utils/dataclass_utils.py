@@ -138,6 +138,11 @@ def is_dunder(s):
     return s.startswith("__") and s.endswith("__")
 
 
+salt = (
+    uuid.uuid1()
+)  # to prevent clashes when "merging" graphs built in different python processes, cause then objects-ids could clash!
+
+
 class MyCustomEncoder(json.JSONEncoder):
     """
     # see: https://stackoverflow.com/questions/64777931/what-is-the-recommended-way-to-include-properties-in-dataclasses-in-asdict-or-se
@@ -171,14 +176,15 @@ class MyCustomEncoder(json.JSONEncoder):
             module = obj.__class__.__module__
             if module == "__main__":
                 prefixes = os.environ["PYTHONPATH"].split(":")
-                file_path = __file__.replace(".py", "")
+                file_path = __file__.replace(".py", "")  # TODO: how can this work?
+                #  try like this:    file_path=os.path.abspath(inspect.getsourcefile(obj.__class__))
                 for p in prefixes:
                     file_path = file_path.replace(p, "")
 
                 module = file_path.strip("/").replace("/", ".")
             _target_ = f"{module}.{obj.__class__.__name__}"
             self.maybe_append(result, self.class_reference_key, _target_)
-            self.maybe_append(result, IDKEY, f"{uuid.uuid1()}")
+            self.maybe_append(result, IDKEY, f"{salt}-{id(obj)}")
 
             def exclude_for_hash(o, f_name: str) -> bool:
                 if self.encode_for_hash and hasattr(o, "__exclude_from_hash__"):
@@ -393,12 +399,16 @@ FILLME = Union[T, _UNDEFINED]  # TODO: destroy IDE argument hint
 #     pass
 
 
-def all_undefined_must_be_filled(obj):
-    for f in dataclasses.fields(obj):
-        if not f.name.startswith("_") and f.init:
-            assert not isinstance(
-                getattr(obj, f.name), _UNDEFINED
-            ), f"{f.name=} of {obj.name if hasattr(obj,'name') else obj} ({type(obj)})is UNDEFINED!"
+def all_undefined_must_be_filled(obj, extra_field_names: Optional[list[str]] = None):
+    field_names = [
+        f.name for f in dataclasses.fields(obj) if not f.name.startswith("_") and f.init
+    ]
+    if extra_field_names is not None:
+        field_names += extra_field_names
+    for f_name in field_names:
+        assert (
+            getattr(obj, f_name) is not UNDEFINED
+        ), f"{f_name=} of {obj.name if hasattr(obj,'name') else obj} ({type(obj)})is UNDEFINED!"
 
 
 @dataclass
