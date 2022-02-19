@@ -308,3 +308,44 @@ def retry(
         raise exception
     else:
         return default
+
+
+@beartype
+def build_markdown_table(
+    rows: list[list[float]],
+    row_name: str,
+    col_name: str,
+    row_names: list[str],
+    col_names: list[str],
+):
+    rows_s = [[f"{100 * v:.1f}%" for v in r] for r in rows]
+    header = " | ".join([f"{row_name} \ {col_name}"] + col_names)
+    line = " | ".join(["---" for _ in range(len(col_names) + 1)])
+    rows = [" | ".join([name] + cols) for name, cols in zip(row_names, rows_s)]
+    return "\n".join([header, line] + rows)
+
+
+def format_table_cell(
+    v,
+):
+    if isinstance(v, float):
+        v = f"{v:.3f}"
+    return f"{v}"
+
+
+@beartype
+def build_markdown_table_from_dicts(
+    dicts: list[dict],
+    col_title: str,
+    col_names: Optional[list[str]] = None,
+    format_fun: Callable[[Any], str] = format_table_cell,
+):
+    if col_names is None:
+        col_names = list(dicts[0].keys())
+
+    row_title = col_names[0]
+    rows_s = [[format_fun(d[c]) for c in col_names] for d in dicts]
+    header = " | ".join([f"{row_title} \ {col_title}"] + col_names)
+    line = " | ".join(["---" for _ in range(len(col_names) + 1)])
+    rows = [" | ".join(row) for row in rows_s]
+    return "\n".join([header, line] + rows)
