@@ -12,6 +12,7 @@ import traceback
 from dataclasses import dataclass, field
 from hashlib import sha1
 
+import pandas
 from filelock import FileLock
 from time import time, sleep
 from typing import Iterable, Callable, TypeVar, Optional, Union, Iterator, Any, Generic
@@ -149,20 +150,35 @@ class TimedIterable(Generic[T]):
     iterable: Iterable[T]
     duration: float = field(default=0.0, init=False)
     outcome: float = field(default=0.0, init=False)
+    durations: list[float] = field(default_factory=lambda: [], init=False)
+    outcomes: list[float] = field(default_factory=lambda: [], init=False)
     # overall_duration_only:bool
     weight_fun: Callable[[Any], float] = lambda x: 1.0
 
     def __iter__(self) -> Iterator[T]:
         last_time = time()
         for x in self.iterable:
-            self.duration += time() - last_time
-            self.outcome += self.weight_fun(x)
+            dur = time() - last_time
+            self.durations.append(dur)
+            self.duration += dur
+            out = self.weight_fun(x)
+            self.outcomes.append(out)
+            self.outcome += out
             yield x
             last_time = time()
 
     @property
     def speed(self):
-        return self.outcome / self.duration
+        return self.outcome / self.duration if self.duration > 0 else -1
+
+    @property
+    def avg_duration(self):
+        return 1 / self.speed
+
+    def __repr__(self):
+        return (
+            f"{pandas.DataFrame(self.durations).describe(percentiles=[0.5]).to_dict()}"
+        )
 
 
 def sanitize_hexappend_filename(filename: str) -> str:

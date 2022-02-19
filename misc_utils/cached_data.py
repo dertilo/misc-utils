@@ -281,7 +281,9 @@ class CachedData(Buildable, ABC):
         assert isinstance(
             self.cache_base, PrefixSuffix
         ), f"{self.name},({type(self).__name__})"
-        all_undefined_must_be_filled(self)
+        all_undefined_must_be_filled(
+            self, extra_field_names=["name"]
+        )  # property overwritten by field still not listed in dataclasses.fields!
         hashed_self = hash_dataclass(self)
         typed_self = type(self).__name__
         name = self.name.replace("/", "_")
