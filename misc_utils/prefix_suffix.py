@@ -5,6 +5,7 @@ from typing import Union, ClassVar, Any
 from misc_utils.buildable import Buildable
 
 BASE_PATHES: dict[str, Union[str, "PrefixSuffix"]] = {}
+BASE_PATHES["pwd"] = "."
 
 
 @dataclass

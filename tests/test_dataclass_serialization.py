@@ -1,3 +1,7 @@
+import importlib
+import sys
+
+sys.path.append(".")
 import json
 from dataclasses import dataclass, field
 from enum import Enum, auto
@@ -248,9 +252,15 @@ def test_None():
 
 
 if __name__ == "__main__":
+    """
+    for some stupid reason this doesn't work form pycharm but form command-line
+    even though I set working-directory in run-configs
+    """
     o = TestDataClass(
         foo="foo",
         bla={"foo": [AnotherDataClass("foo") for k in range(3)], "bar": None},
     )
+    assert o.__class__.__module__ == "__main__"
     s = encode_dataclass(o)
-    print(s)
+    o2 = decode_dataclass(s)
+    print(o2)

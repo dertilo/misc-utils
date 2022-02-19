@@ -55,11 +55,11 @@ class ContinuedCachedData(CachedData):
     def _build_cache(self):
         print(f"start from scratch in {self.cache_dir}")
 
-    def _load_cached(self) -> None:
+    def _load_cached_data(self) -> None:
         print(f"continue in {self.cache_dir}")
-        IT_FAILED = "<IT_FAILED>"
-        # just_try here might be too much care-taking?
-        just_try(lambda: self.continued_build_cache(), default=IT_FAILED, verbose=True)
+        self.continued_build_cache()
+        # TODO: why did I want to just_try here?
+        # just_try(lambda: self.continued_build_cache(), verbose=True)
 
     @abstractmethod
     def continued_build_cache(self) -> None:

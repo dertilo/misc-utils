@@ -176,8 +176,11 @@ class MyCustomEncoder(json.JSONEncoder):
             module = obj.__class__.__module__
             if module == "__main__":
                 prefixes = os.environ["PYTHONPATH"].split(":")
-                file_path = __file__.replace(".py", "")  # TODO: how can this work?
-                #  try like this:    file_path=os.path.abspath(inspect.getsourcefile(obj.__class__))
+                file_path = os.path.abspath(inspect.getsourcefile(obj.__class__))
+                file_path = file_path.replace(".py", "")
+                assert any(
+                    (file_path.startswith(p) for p in prefixes)
+                ), f"{file_path=}, {prefixes=}, set PYTHONPATH if you run script from __main__"
                 for p in prefixes:
                     file_path = file_path.replace(p, "")
 
