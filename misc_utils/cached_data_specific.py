@@ -55,7 +55,8 @@ class ContinuedCachedData(CachedData):
     def _build_cache(self):
         print(f"start from scratch in {self.cache_dir}")
 
-    def _load_cached_data(self) -> None:
+    def _post_build_setup(self):
+        super()._post_build_setup()
         print(f"continue in {self.cache_dir}")
         self.continued_build_cache()
         # TODO: why did I want to just_try here?

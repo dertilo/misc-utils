@@ -336,7 +336,7 @@ def format_table_cell(
 @beartype
 def build_markdown_table_from_dicts(
     dicts: list[dict],
-    col_title: str,
+    col_title: Optional[str] = None,
     col_names: Optional[list[str]] = None,
     format_fun: Callable[[Any], str] = format_table_cell,
 ):
@@ -345,7 +345,8 @@ def build_markdown_table_from_dicts(
 
     row_title = col_names[0]
     rows_s = [[format_fun(d[c]) for c in col_names] for d in dicts]
-    header = " | ".join([f"{row_title} \ {col_title}"] + col_names)
-    line = " | ".join(["---" for _ in range(len(col_names) + 1)])
+    col_title = f" \ {col_title}" if col_title is not None else ""
+    header = " | ".join([f"{row_title}{col_title}"] + col_names[1:])
+    line = " | ".join(["---" for _ in range(len(col_names))])
     rows = [" | ".join(row) for row in rows_s]
     return "\n".join([header, line] + rows)
