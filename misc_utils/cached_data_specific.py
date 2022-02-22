@@ -56,7 +56,6 @@ class ContinuedCachedData(CachedData):
         print(f"start from scratch in {self.cache_dir}")
 
     def _post_build_setup(self):
-        super()._post_build_setup()
         print(f"continue in {self.cache_dir}")
         self.continued_build_cache()
         # TODO: why did I want to just_try here?
@@ -138,6 +137,6 @@ class CachedList(CachedData, list):
     def _build_cache(self):
         write_lines(self.data_file, self._build_data())
 
-    def _load_cached(self) -> None:
+    def _post_build_setup(self) -> None:
         assert len(self) == 0, f"CachedList {self} must be empty when before loading"
         self.extend(read_lines(self.data_file))

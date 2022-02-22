@@ -2,12 +2,13 @@ import json
 import os
 import random
 import traceback
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Optional, Callable, Any, TypeVar
 
 import sys
 
+import wandb
 from beartype import beartype
 from filelock import FileLock, Timeout
 from time import sleep
@@ -182,9 +183,11 @@ class FileBasedWorker:
     stop_on_error: bool = False
     wait_even_though_queue_is_empty: bool = True
 
+    job_queue: FileBasedJobQueue = field(init=False, repr=False)
+
     def run(self):
         print(f"worker for {self.queue_dir=}")
-        # wandb.init(project="asr-inference", name=f"{self.row=}-{self.col=}")
+        wandb.init(project="asr-inference", name=self.worker_name)
 
         job_queue = FileBasedJobQueue(queue_dir=self.queue_dir)
         job_queue.build()
@@ -211,7 +214,7 @@ class FileBasedWorker:
                 else:
                     break
 
-    def _process_job(self, job, job_queue):
+    def _process_job(self, job, job_queue: FileBasedJobQueue):
         error = None
         got_poisoned = False
 
@@ -235,9 +238,12 @@ class FileBasedWorker:
             print(f"done {job.id}")
             if error is not None:
                 write_file(
-                    job.job_file(job_queue.done_dir).replace(".json", "_error.txt"),
+                    job.job_file(job_queue.done_dir).replace(
+                        ".json", f"{self.worker_name}_error.txt"
+                    ),
                     str(error),
                 )
+            # job_queue.put(job) # could requeue it!
             job_queue.done(job)
             if error is not None and self.stop_on_error:
                 raise error

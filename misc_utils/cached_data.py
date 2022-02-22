@@ -109,6 +109,16 @@ class CachedData(Buildable, ABC):
             is_ready = False
         return is_ready
 
+    def _maybe_export_cache(self):
+        new_cache_root = os.environ.get("EXPORT_CACHE_ROOT", None)
+        if new_cache_root is not None:
+            print(f"copy {str(self.cache_dir)} to {new_cache_root}")
+            shutil.copytree(
+                str(self.cache_dir),
+                f"{new_cache_root}/{self.cache_dir.suffix}",
+                dirs_exist_ok=True,
+            )
+
     def _found_and_loaded_from_cache(self):
 
         if self._found_dataclass_json():
@@ -120,6 +130,7 @@ class CachedData(Buildable, ABC):
             )
             self._load_cached_data()
             self._post_build_setup()
+            self._maybe_export_cache()
             # print(
             #     f"LOADED cached: {self.name} ({self.__class__.__name__}) from {self.cache_dir}"
             # )
@@ -159,6 +170,7 @@ class CachedData(Buildable, ABC):
             print(
                 f"SETUP: {self.name} ({self.__class__.__name__}) took: {duration} seconds from {self.cache_dir}"
             )
+        self._maybe_export_cache()
 
     def _prepare(self, cache_dir: str) -> None:
         pass
@@ -194,14 +206,7 @@ class CachedData(Buildable, ABC):
         """
         use this to prepare stuff, last step in build_or_load, called after build_cache and _load_cached_data
         """
-        new_cache_root = os.environ.get("EXPORT_CACHE_ROOT", None)
-        if new_cache_root is not None:
-            print(f"copy {str(self.cache_dir)} to {new_cache_root}")
-            shutil.copytree(
-                str(self.cache_dir),
-                f"{new_cache_root}/{self.cache_dir.suffix}",
-                dirs_exist_ok=True,
-            )
+        pass
 
     def _load_cached_data(self):
         """
@@ -262,11 +267,17 @@ class CachedData(Buildable, ABC):
                 )
 
     def _pre_build_load_state_fields(self):
+        """
+        this is getting called before _build_all_chrildren !! so a shape-shifting child gets loaded from cache before its build is called!
+        """
         cache_data_json = read_file(self.dataclass_json)
         loaded_dc = deserialize_dataclass(cache_data_json)
         repr_fields = list(
             f
             for f in dataclasses.fields(self)
+            if hasattr(
+                self, f.name
+            )  # dataclasses.field() without default produced "missing" field
             # buildable fields also get loaded!!! that supposed to be like this! cause they could have shape-shifted!!
             # if f.repr and not isinstance(getattr(self, f.name), Buildable)
         )

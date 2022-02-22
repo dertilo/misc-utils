@@ -7,7 +7,7 @@ import locale
 import os
 import re
 import tarfile
-from typing import Dict, Iterator, Callable, Optional, Tuple, TypeVar, Any
+from typing import Dict, Iterator, Callable, Optional, Tuple, TypeVar, Any, Union
 from typing import Iterable
 
 from beartype import beartype
@@ -15,7 +15,12 @@ from beartype import beartype
 assert locale.getpreferredencoding(False) == "UTF-8"
 
 
-def write_jsonl(file: str, data: Iterable[Dict], mode="wb", do_flush: bool = False):
+def write_jsonl(
+    file: str,
+    data: Iterable[Union[dict, list, tuple]],
+    mode="wb",
+    do_flush: bool = False,
+):
     file = str(file)
 
     def process_line(d: Dict):
