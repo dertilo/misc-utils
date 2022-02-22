@@ -284,9 +284,13 @@ class MyDecoder(json.JSONDecoder):
                     o = object_registry[eid]
                     serialized_dc = serialize_dataclass(o, skip_keys=[IDKEY])
                     json_dups_dct = serialize_dataclass(dct, skip_keys=[IDKEY])
-                    assert (
-                        serialized_dc == json_dups_dct
-                    ), f"clashing _id_s, {eid=}\n{serialized_dc}\n{json_dups_dct} "
+                    if (
+                        dct["_target_"] != "misc_utils.prefix_suffix.PrefixSuffix"
+                    ):  # no isinstance due to circular dependency
+                        # PrefixSuffix does change prefix depending on BASE_PATHES
+                        assert (
+                            serialized_dc == json_dups_dct
+                        ), f"{dct['_target_']}; clashing _id_s, {eid=}\n{serialized_dc}\n{json_dups_dct} "
                 else:
                     o = instantiate_via_importlib(dct, class_key)
                     # if eid is not None:

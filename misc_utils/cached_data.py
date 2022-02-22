@@ -23,7 +23,7 @@ from misc_utils.dataclass_utils import (
     remove_if_exists,
     serialize_dataclass,
 )
-from misc_utils.prefix_suffix import PrefixSuffix
+from misc_utils.prefix_suffix import PrefixSuffix, BASE_PATHES
 from misc_utils.utils import Singleton, claim_write_access, just_try
 
 
@@ -48,6 +48,17 @@ def remove_make_dir(dirr):
     os.makedirs(
         dirr
     )  # TODO: WTF! this sometimes failes cause it does not get that directory was removed! some state is not flushed
+
+
+export_black_list = [
+    "LM_DATA",
+    "RAW_DATA",
+    "STABLEFORMAT_DATA",
+    "ANNOTATION_DATA",
+    "AUDIO_FILE_CORPORA"
+    "PROCESSED_DATA",
+    "EVAL_DATASETS_CACHE",
+] # TODO: WTF!!
 
 
 @dataclass
@@ -99,25 +110,43 @@ class CachedData(Buildable, ABC):
         """
         looks somehow ugly, but necessary in order to prevent build of dependencies when actually already cached
         if is_ready is True does prevent complete build: not building cache not even loading caches (of nodes further up in the graph)!!
+        # TODO: could enforce here that all runtime-dependencies are ready, concepts of build-time vs. runtime not yet implemented!!!
         """
         is_ready = self._was_built
         if not is_ready:
             is_ready = self._found_and_loaded_from_cache()
-        new_cache_root = os.environ.get("EXPORT_CACHE_ROOT", None)
-        if new_cache_root is not None:
-            os.environ["NO_BUILD"] = "True"
+        new_cache_root = BASE_PATHES.get("EXPORT_CACHE_ROOT", None)
+
+        if new_cache_root is not None and not self.cache_base_is_blacklisted(
+            export_black_list
+        ):
+            # necessary to traverse deeper into graph
+            # os.environ["NO_BUILD"] = "True"
             is_ready = False
         return is_ready
 
     def _maybe_export_cache(self):
-        new_cache_root = os.environ.get("EXPORT_CACHE_ROOT", None)
-        if new_cache_root is not None:
+        new_cache_root = BASE_PATHES.get("EXPORT_CACHE_ROOT", None)
+        # black_list = BASE_PATHES.get("EXPORT_CACHE_cache_base_blacklist",[])
+        new_cache_dir = f"{new_cache_root}/{self.cache_dir.suffix}"
+        if (
+            new_cache_root is not None
+            and not os.path.isdir(new_cache_dir)
+            and not self.cache_base_is_blacklisted(export_black_list)
+        ):
             print(f"copy {str(self.cache_dir)} to {new_cache_root}")
             shutil.copytree(
                 str(self.cache_dir),
-                f"{new_cache_root}/{self.cache_dir.suffix}",
-                dirs_exist_ok=True,
+                new_cache_dir,
             )
+
+    def cache_base_is_blacklisted(self, black_list):
+        return any(
+            (
+                str(self.cache_base).endswith(forbidden_suffix)
+                for forbidden_suffix in black_list
+            )
+        )
 
     def _found_and_loaded_from_cache(self):
 
@@ -205,6 +234,8 @@ class CachedData(Buildable, ABC):
     def _post_build_setup(self):
         """
         use this to prepare stuff, last step in build_or_load, called after build_cache and _load_cached_data
+        might be building children even though loaded from cache, cannot enforce that all laoded children are "ready"
+        might be that some are only "build-time" dependencies
         """
         pass
 
@@ -276,21 +307,23 @@ class CachedData(Buildable, ABC):
             f
             for f in dataclasses.fields(self)
             if hasattr(
-                self, f.name
+                loaded_dc, f.name
             )  # dataclasses.field() without default produced "missing" field
             # buildable fields also get loaded!!! that supposed to be like this! cause they could have shape-shifted!!
             # if f.repr and not isinstance(getattr(self, f.name), Buildable)
         )
-        print(
-            f"{type(self).__name__}-{self.name}: loading state-fields: {[f.name for f in repr_fields]}"
-        )
+        # print(
+        #     f"{type(self).__name__}-{self.name}: loading state-fields: {[f.name for f in repr_fields]}"
+        # )
         for f in repr_fields:
             setattr(self, f.name, getattr(loaded_dc, f.name))
         # TODO: why was I not loading input fields in the past?
         if hash_dataclass(self) != hash_dataclass(loaded_dc):
             write_json("loaded_dc.json", encode_dataclass(loaded_dc))
             write_json("self_dc.json", encode_dataclass(self))
-            assert False, f"see loaded_dc.json and self_dc.json"
+            assert (
+                False
+            ), f"icdiff <(cat loaded_dc.json | jq . ) <(cat self_dc.json | jq . ) | less -r"
 
     def create_cache_dir_from_hashed_self(self) -> PrefixSuffix:
         assert isinstance(
