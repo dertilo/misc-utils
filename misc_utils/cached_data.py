@@ -92,25 +92,32 @@ class CachedData(Buildable, ABC):
 
     @property
     def _is_ready(self) -> bool:
+        is_ready = self._cache_is_ready()
+        return is_ready
+
+    def _cache_is_ready(self):
         """
         looks somehow ugly, but necessary in order to prevent build of dependencies when actually already cached
         if is_ready is True does prevent complete build: not building cache not even loading caches (of nodes further up in the graph)!!
         """
-        is_ready = super()._is_ready
+        is_ready = self._was_built
         if not is_ready:
             is_ready = self._found_and_loaded_from_cache()
-
         new_cache_root = os.environ.get("EXPORT_CACHE_ROOT", None)
         if new_cache_root is not None:
             os.environ["NO_BUILD"] = "True"
             is_ready = False
-
         return is_ready
 
     def _found_and_loaded_from_cache(self):
 
         if self._found_dataclass_json():
-            self._load_cached()  # TODO: to be removed
+            just_try(
+                lambda: self._pre_build_load_state_fields(),
+                reraise=True,
+                verbose=True,
+                fail_print_message_builder=lambda: f"could not _load_state_fields for {type(self).__name__=}",
+            )
             self._load_cached_data()
             self._post_build_setup()
             # print(
@@ -146,7 +153,6 @@ class CachedData(Buildable, ABC):
         self.maybe_build_cache()
 
         start = time()
-        self._load_cached()  # TODO: remove use _load_cached_data and _post_build_setup
         self._post_build_setup()
         duration = time() - start
         if duration >= 1.0:
@@ -192,7 +198,9 @@ class CachedData(Buildable, ABC):
         if new_cache_root is not None:
             print(f"copy {str(self.cache_dir)} to {new_cache_root}")
             shutil.copytree(
-                str(self.cache_dir), f"{new_cache_root}/{self.cache_dir.suffix}"
+                str(self.cache_dir),
+                f"{new_cache_root}/{self.cache_dir.suffix}",
+                dirs_exist_ok=True,
             )
 
     def _load_cached_data(self):
@@ -200,19 +208,6 @@ class CachedData(Buildable, ABC):
         just called when cache was found
         """
         pass
-
-    def _load_cached(self) -> None:
-        # TODO: to be removed! use _load_cached_data and _post_build_setup
-        # not loading persistable_state_fields+complete datum here!
-        # is everybodys own responsibility! -> why?
-        # if I can persist it I am able to deserialize it!
-        # but I should not deserialize stuff that is already in (python) memory!
-        just_try(
-            lambda: self._load_state_fields(),
-            reraise=True,
-            verbose=True,
-            fail_print_message_builder=lambda: f"could not _load_state_fields for {type(self).__name__=}",
-        )
 
     @beartype
     def maybe_build_cache(
@@ -266,16 +261,25 @@ class CachedData(Buildable, ABC):
                     f"LOADED cached: {self.name} ({self.__class__.__name__}) took: {duration} seconds from {self.cache_dir}"
                 )
 
-    def _load_state_fields(self):
+    def _pre_build_load_state_fields(self):
         cache_data_json = read_file(self.dataclass_json)
         loaded_dc = deserialize_dataclass(cache_data_json)
-        repr_fields = list(f for f in dataclasses.fields(self) if f.repr)
+        repr_fields = list(
+            f
+            for f in dataclasses.fields(self)
+            # buildable fields also get loaded!!! that supposed to be like this! cause they could have shape-shifted!!
+            # if f.repr and not isinstance(getattr(self, f.name), Buildable)
+        )
+        print(
+            f"{type(self).__name__}-{self.name}: loading state-fields: {[f.name for f in repr_fields]}"
+        )
         for f in repr_fields:
             setattr(self, f.name, getattr(loaded_dc, f.name))
         # TODO: why was I not loading input fields in the past?
-        assert hash_dataclass(self) == hash_dataclass(
-            loaded_dc
-        ), f"{self=}!={loaded_dc=}"
+        if hash_dataclass(self) != hash_dataclass(loaded_dc):
+            write_json("loaded_dc.json", encode_dataclass(loaded_dc))
+            write_json("self_dc.json", encode_dataclass(self))
+            assert False, f"see loaded_dc.json and self_dc.json"
 
     def create_cache_dir_from_hashed_self(self) -> PrefixSuffix:
         assert isinstance(

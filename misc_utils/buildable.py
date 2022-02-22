@@ -51,12 +51,13 @@ class Buildable:
                 o = self
             self._was_built = True
             duration = time() - start
-            if duration > 1.0:
+            if duration > .0:
                 print(
                     f"build_self of {self.__class__.__name__} took:{duration} seconds"
                 )
         else:
-            # print(f"not building {self.__class__.__name__}, is ready!")
+            print(f"not building {self.__class__.__name__}, is ready!")
+            self._was_built = True # being ready is as good as being built
             o = self
         assert o is not None  # TODO: should be done be beartype!
         return o
