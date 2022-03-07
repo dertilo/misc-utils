@@ -176,6 +176,11 @@ class MyCustomEncoder(json.JSONEncoder):
             module = obj.__class__.__module__
             if module == "__main__":
                 prefixes = os.environ["PYTHONPATH"].split(":")
+                prefixes = [  # which are not prefix of another one
+                    p
+                    for p in prefixes
+                    if not any((pp.startswith(p) and p != pp for pp in prefixes))
+                ]
                 file_path = os.path.abspath(inspect.getsourcefile(obj.__class__))
                 file_path = file_path.replace(".py", "")
                 assert any(
@@ -274,7 +279,7 @@ class MyDecoder(json.JSONDecoder):
             else:
                 class_key = None
             if class_key is not None and IDKEY in dct:
-                assert class_key in dct
+                assert class_key in dct, f"{class_key=} not in dct"
                 # if IDKEY in dct:
                 eid = dct.pop(IDKEY)
                 # else:

@@ -32,3 +32,8 @@ class PrefixSuffix(Buildable):
         """
         self.__set_prefix()
         return f"{self.prefix}/{self.suffix}"
+
+    def from_str_same_prefix(self, path: str):
+        assert str(path).startswith(self.prefix)
+        file_suffix = str(path).replace(f"{self.prefix}/", "")
+        return PrefixSuffix(self.prefix_key, file_suffix)

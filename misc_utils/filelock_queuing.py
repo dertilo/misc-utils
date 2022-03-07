@@ -176,6 +176,9 @@ class FileBasedJobQueue(Buildable):
         write_job(self.done_dir, done_job)
 
 
+NUM_RETRIES = int(os.environ.get("NUM_RETRIES", 3))
+
+
 @dataclass
 class FileBasedWorker:
     queue_dir: PrefixSuffix
@@ -187,7 +190,7 @@ class FileBasedWorker:
 
     def run(self):
         print(f"worker for {self.queue_dir=}")
-        wandb.init(project="asr-inference", name=self.worker_name)
+        # wandb.init(project="asr-inference", name=self.worker_name)
 
         job_queue = FileBasedJobQueue(queue_dir=self.queue_dir)
         job_queue.build()
@@ -225,7 +228,7 @@ class FileBasedWorker:
                 return got_poisoned
             retry(
                 lambda: self._doing_job(job),
-                num_retries=5,
+                num_retries=NUM_RETRIES,
                 wait_time=1.0,
                 increase_wait_time=True,
             )
@@ -251,5 +254,5 @@ class FileBasedWorker:
 
     def _doing_job(self, job):
         buildable = deserialize_dataclass(job.task)
-        print(f"doing {job.id}")
+        print(f"doing {job.id} with {NUM_RETRIES=}")
         job.task = serialize_dataclass(buildable.build())

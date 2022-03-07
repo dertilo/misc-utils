@@ -55,10 +55,9 @@ export_black_list = [
     "RAW_DATA",
     "STABLEFORMAT_DATA",
     "ANNOTATION_DATA",
-    "AUDIO_FILE_CORPORA"
-    "PROCESSED_DATA",
+    "AUDIO_FILE_CORPORA" "PROCESSED_DATA",
     "EVAL_DATASETS_CACHE",
-] # TODO: WTF!!
+]  # TODO: WTF!! this is a hack! specific to a use-case, things like ANNOTATION_DATA should not be here
 
 
 @dataclass
@@ -70,6 +69,8 @@ class CachedData(Buildable, ABC):
     cache_dir: Union[
         _CREATE_CACHE_DIR_IN_BASE_DIR, PrefixSuffix
     ] = CREATE_CACHE_DIR_IN_BASE_DIR
+    use_hash_suffix: bool = True
+    overwrite_cache: bool = False
     _json_file_name: ClassVar[int] = "dataclass.json"
     __exclude_from_hash__: ClassVar[list[str]] = []
     clean_on_fail: bool = dataclasses.field(default=True, repr=False)
@@ -150,7 +151,11 @@ class CachedData(Buildable, ABC):
 
     def _found_and_loaded_from_cache(self):
 
-        if self._found_dataclass_json():
+        found_json = self._found_dataclass_json()
+        if self.overwrite_cache:
+            remove_if_exists(str(self.cache_dir))
+            successfully_loaded_cached = False
+        elif found_json:
             just_try(
                 lambda: self._pre_build_load_state_fields(),
                 reraise=True,
@@ -205,7 +210,9 @@ class CachedData(Buildable, ABC):
         pass
 
     def __cache_creation_is_in_process(self):
-        return os.path.isfile(f"{self.cache_dir}.lock")
+        return os.path.isfile(f"{self.cache_dir}.lock") or os.path.isfile(
+            f"{self.cache_dir}.lock.lock"
+        )
 
     def _found_dataclass_json(self) -> bool:
         if self.cache_dir is CREATE_CACHE_DIR_IN_BASE_DIR:
@@ -280,6 +287,7 @@ class CachedData(Buildable, ABC):
             remove_if_exists(
                 f"{self.dataclass_json}.lock"
             )  # failed attempt to claim lock may still create lock-file!
+            remove_if_exists(f"{self.dataclass_json}.lock.lock")
             does_exist = False  # TODO wtf!
             for _ in range(3):
                 if self._found_dataclass_json():
@@ -299,7 +307,7 @@ class CachedData(Buildable, ABC):
 
     def _pre_build_load_state_fields(self):
         """
-        this is getting called before _build_all_chrildren !! so a shape-shifting child gets loaded from cache before its build is called!
+        this is getting called before _build_all_children !! so a shape-shifting child gets loaded from cache before its build is called!
         """
         cache_data_json = read_file(self.dataclass_json)
         loaded_dc = deserialize_dataclass(cache_data_json)
@@ -332,10 +340,10 @@ class CachedData(Buildable, ABC):
         all_undefined_must_be_filled(
             self, extra_field_names=["name"]
         )  # property overwritten by field still not listed in dataclasses.fields!
-        hashed_self = hash_dataclass(self)
         typed_self = type(self).__name__
         name = self.name.replace("/", "_")
+        hash_suffix = f"-{hash_dataclass(self)}" if self.use_hash_suffix else ""
         return PrefixSuffix(
             prefix_key=self.cache_base.prefix_key,
-            suffix=f"{self.cache_base.suffix}/{typed_self}-{name}-{hashed_self}",
+            suffix=f"{self.cache_base.suffix}/{typed_self}-{name}{hash_suffix}",
         )

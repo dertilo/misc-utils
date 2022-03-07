@@ -17,7 +17,7 @@ T = TypeVar("T")
 @dataclass
 class CachedDataclasses(Iterable[T], CachedData):
 
-    jsonl_file_name: ClassVar[str] = "data.jsonl"
+    jsonl_file_name: ClassVar[str] = "data.jsonl.gz"
 
     @property
     def jsonl_file(self):

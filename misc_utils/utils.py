@@ -290,12 +290,12 @@ def retry(
     fail_message=None,
 ):
     exception = None
-    for k in range(num_retries):
+    for k in range(1 + num_retries):  # if num_retries==0 should still try once!
         try:
             return fun()
         except Exception as e:
             exception = e
-            print(f"\n{exception=}\n")
+            print(f"retry failure:\n{exception=}\n")
             if increase_wait_time:
                 waiting_time = wait_time * 2 ** k
             else:
@@ -339,7 +339,7 @@ def build_markdown_table_from_dicts(
     col_title: Optional[str] = None,
     col_names: Optional[list[str]] = None,
     format_fun: Callable[[Any], str] = format_table_cell,
-):
+) -> str:
     if col_names is None:
         col_names = list(dicts[0].keys())
 
