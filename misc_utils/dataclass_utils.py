@@ -126,9 +126,13 @@ def hash_dataclass(dc: Dataclass):
     """
     under, dunder and __exclude_from_hash__ fields are not hashed!
     """
-    skip_keys = [IDKEY, "cache_base", "cache_dir"] + [
-        f.name for f in dataclasses.fields(dc) if is_dunder(f.name)
-    ]
+    skip_keys = [
+        IDKEY,
+        "cache_base",
+        "cache_dir",
+        "use_hash_suffix",
+        "overwrite_cache",
+    ] + [f.name for f in dataclasses.fields(dc) if is_dunder(f.name)]
     s = serialize_dataclass(dc, skip_keys=skip_keys, encode_for_hash=True)
     hashed_self = sha1(s.encode("utf-8")).hexdigest()
     return hashed_self

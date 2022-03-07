@@ -69,8 +69,8 @@ class CachedData(Buildable, ABC):
     cache_dir: Union[
         _CREATE_CACHE_DIR_IN_BASE_DIR, PrefixSuffix
     ] = CREATE_CACHE_DIR_IN_BASE_DIR
-    use_hash_suffix: bool = True
-    overwrite_cache: bool = False
+    use_hash_suffix: bool = dataclasses.field(init=True, repr=True, default=True)
+    overwrite_cache: bool = dataclasses.field(init=True, repr=False, default=False)
     _json_file_name: ClassVar[int] = "dataclass.json"
     __exclude_from_hash__: ClassVar[list[str]] = []
     clean_on_fail: bool = dataclasses.field(default=True, repr=False)
