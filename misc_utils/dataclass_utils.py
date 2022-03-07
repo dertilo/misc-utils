@@ -15,7 +15,7 @@ import omegaconf
 from beartype import beartype
 from omegaconf import OmegaConf
 
-from data_io.readwrite_files import write_file
+from data_io.readwrite_files import write_file, write_json
 from misc_utils.base64_utils import Base64Decoder
 from misc_utils.beartypes import Dataclass, NeStr
 from misc_utils.utils import Singleton, just_try
@@ -287,15 +287,29 @@ class MyDecoder(json.JSONDecoder):
 
                 if eid in object_registry.keys():
                     o = object_registry[eid]
-                    serialized_dc = serialize_dataclass(o, skip_keys=[IDKEY])
-                    json_dups_dct = serialize_dataclass(dct, skip_keys=[IDKEY])
+                    just_for_backward_compatibility = [
+                        "use_hash_suffix",
+                        "overwrite_cache",
+                    ]
+                    dct_from_obj_registry = serialize_dataclass(
+                        o, skip_keys=[IDKEY] + just_for_backward_compatibility
+                    )
+                    dct_with_same_id = serialize_dataclass(
+                        dct, skip_keys=[IDKEY] + just_for_backward_compatibility
+                    )
                     if (
                         dct["_target_"] != "misc_utils.prefix_suffix.PrefixSuffix"
                     ):  # no isinstance due to circular dependency
                         # PrefixSuffix does change prefix depending on BASE_PATHES
-                        assert (
-                            serialized_dc == json_dups_dct
-                        ), f"{dct['_target_']}; clashing _id_s, {eid=}\n{serialized_dc}\n{json_dups_dct} "
+                        if dct_from_obj_registry != dct_with_same_id:
+                            write_file(
+                                "dct_from_obj_registry.json", dct_from_obj_registry
+                            )
+                            write_file("dct_with_same_id.json", dct_with_same_id)
+                            assert (
+                                False
+                            ), f"icdiff <(cat dct_from_obj_registry.json | jq . ) <(cat dct_with_same_id.json | jq . ) | less -r"
+
                 else:
                     o = instantiate_via_importlib(dct, class_key)
                     # if eid is not None:
