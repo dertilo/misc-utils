@@ -10,6 +10,7 @@ from misc_utils.dataclass_utils import (
     deserialize_dataclass,
 )
 from misc_utils.utils import just_try
+from tqdm import tqdm
 
 T = TypeVar("T")
 
@@ -34,7 +35,13 @@ class CachedDataclasses(Iterable[T], CachedData):
         raise NotImplementedError
 
     def generate_dicts_to_cache(self) -> Iterator[dict]:
-        yield from (encode_dataclass(o) for o in self.generate_dataclasses_to_cache())
+        yield from (
+            encode_dataclass(o)
+            for o in tqdm(
+                self.generate_dataclasses_to_cache(),
+                desc=f"buidling cache for {self.name}",
+            )
+        )
 
     def __iter__(self) -> Iterator[T]:
         yield from (deserialize_dataclass(s) for s in read_lines(self.jsonl_file))

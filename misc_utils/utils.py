@@ -12,7 +12,6 @@ import traceback
 from dataclasses import dataclass, field
 from hashlib import sha1
 
-import pandas
 from filelock import FileLock
 from time import time, sleep
 from typing import Iterable, Callable, TypeVar, Optional, Union, Iterator, Any, Generic
@@ -176,6 +175,7 @@ class TimedIterable(Generic[T]):
         return 1 / self.speed
 
     def __repr__(self):
+        import pandas
         return (
             f"{pandas.DataFrame(self.durations).describe(percentiles=[0.5]).to_dict()}"
         )

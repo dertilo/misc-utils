@@ -56,7 +56,7 @@ export_black_list = [
     "STABLEFORMAT_DATA",
     "ANNOTATION_DATA",
     "AUDIO_FILE_CORPORA" "PROCESSED_DATA",
-    "EVAL_DATASETS_CACHE",
+    # "EVAL_DATASETS_CACHE", Vocab is cached here!
 ]  # TODO: WTF!! this is a hack! specific to a use-case, things like ANNOTATION_DATA should not be here
 
 
