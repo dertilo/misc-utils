@@ -102,8 +102,10 @@ def write_csv(
 
 
 @beartype
-def read_csv(file_path, delimiter: str = "\t") -> Iterable[dict[str, str]]:
-    lines = read_lines(file_path)
+def read_csv(
+    file_path, delimiter: str = "\t", encoding="utf-8"
+) -> Iterable[dict[str, str]]:
+    lines = read_lines(file_path, encoding=encoding)
     it = iter(lines)
     header = next(it).split(delimiter)
     for l in it:
