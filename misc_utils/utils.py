@@ -16,8 +16,17 @@ from hashlib import sha1
 
 from filelock import FileLock
 from time import time, sleep
-from typing import Iterable, Callable, TypeVar, Optional, Union, Iterator, Any, Generic, \
-    AsyncIterator
+from typing import (
+    Iterable,
+    Callable,
+    TypeVar,
+    Optional,
+    Union,
+    Iterator,
+    Any,
+    Generic,
+    AsyncIterator,
+)
 
 from beartype import beartype
 
@@ -179,6 +188,7 @@ class TimedIterable(Generic[T]):
 
     def __repr__(self):
         import pandas
+
         return (
             f"{pandas.DataFrame(self.durations).describe(percentiles=[0.5]).to_dict()}"
         )
@@ -354,6 +364,7 @@ def build_markdown_table_from_dicts(
     rows = [" | ".join(row) for row in rows_s]
     return "\n".join([header, line] + rows)
 
+
 def async_wrap_iter(it: Iterable) -> AsyncIterator:
     """
     Wrap blocking iterator into an asynchronous one
@@ -390,3 +401,21 @@ def async_wrap_iter(it: Iterable) -> AsyncIterator:
     threading.Thread(target=iter_to_queue).start()
     return yield_queue_items()
 
+
+@beartype
+def iterable_to_chunks(
+    seq: Iterable, is_yieldable_chunk= lambda x: len(x) > 1
+) -> Iterator[list]:
+    """
+    batches normally refer to fixed-size list of things
+    chunks more relaxed/liberal, whatever size
+    """
+    chunk = []
+    for k in seq:
+        if is_yieldable_chunk(chunk):
+            yield chunk
+            chunk = []
+        chunk.append(k)
+
+    if len(chunk) > 0:
+        yield chunk
