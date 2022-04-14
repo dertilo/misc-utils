@@ -1,0 +1,41 @@
+[[package]]
+name = "beartype"
+version = "0.9.1"
+description = "Unbearably fast runtime type checking in pure Python."
+category = "main"
+optional = false
+python-versions = ">=3.6.0"
+
+[package.extras]
+all = ["typing-extensions (>=3.10.0.0)"]
+dev = ["coverage (>=5.5)", "sphinx", "typing-extensions", "mypy (>=0.800)", "numpy", "pytest (>=4.0.0)", "tox (>=3.20.1)", "sphinx (>=4.1.0)"]
+doc-rtd = ["sphinx (==4.1.0)", "sphinx-rtd-theme (==0.5.1)"]
+test-tox = ["sphinx", "typing-extensions", "mypy (>=0.800)", "numpy", "pytest (>=4.0.0)"]
+test-tox-coverage = ["coverage (>=5.5)"]
+
+[[package]]
+name = "filelock"
+version = "3.6.0"
+description = "A platform independent file lock."
+category = "main"
+optional = true
+python-versions = ">=3.7"
+
+[package.extras]
+docs = ["furo (>=2021.8.17b43)", "sphinx (>=4.1)", "sphinx-autodoc-typehints (>=1.12)"]
+testing = ["covdefaults (>=1.2.0)", "coverage (>=4)", "pytest (>=4)", "pytest-cov", "pytest-timeout (>=1.4.2)"]
+
+[metadata]
+lock-version = "1.1"
+python-versions = "^3.9"
+content-hash = "e5a5483d864ccf4cdf9d1e0f00267b462331b1783a1702ab0bbed1aebd3790c1"
+
+[metadata.files]
+beartype = [
+    {file = "beartype-0.9.1-py3-none-any.whl", hash = "sha256:fb23f59b709dd29c4bff25ede0969cdd76aa7e7812abef704d08007ea07372e0"},
+    {file = "beartype-0.9.1.tar.gz", hash = "sha256:623630dc243b0da5a84f0fa414e6aaaf2613e567ad19abfe6a81c17ea5ab62f1"},
+]
+filelock = [
+    {file = "filelock-3.6.0-py3-none-any.whl", hash = "sha256:f8314284bfffbdcfa0ff3d7992b023d4c628ced6feb957351d4c48d059f56bc0"},
+    {file = "filelock-3.6.0.tar.gz", hash = "sha256:9cd540a9352e432c7246a48fe4e8712b10acb1df2ad1f30e8c070b82ae1fed85"},
+]
