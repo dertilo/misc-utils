@@ -1,5 +1,0 @@
-pytest
-beartype
-tqdm
-omegaconf
-filelock
