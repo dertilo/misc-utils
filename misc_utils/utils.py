@@ -1,13 +1,7 @@
 import asyncio
-import collections
-import multiprocessing
-import os
 import threading
 from collections.abc import MutableMapping
-from datetime import datetime
-from pathlib import Path
 
-import filelock
 import itertools
 import random
 import sys
@@ -15,7 +9,6 @@ import traceback
 from dataclasses import dataclass, field
 from hashlib import sha1
 
-from filelock import FileLock
 from time import time, sleep
 from typing import (
     Iterable,
@@ -30,8 +23,6 @@ from typing import (
 )
 
 from beartype import beartype
-
-from data_io.readwrite_files import write_file, read_file
 
 T = TypeVar("T")
 T_default = TypeVar("T_default")
@@ -253,47 +244,6 @@ def count_many(d: dict, counters):
         counters[k].update({v: 1})
 
 
-def claim_write_access(file_or_dir) -> bool:
-    """
-    if false, someone else already claimed it!
-    """
-    claimed_rights_to_write = False
-    lock_file = f"{file_or_dir}.lock"
-    lock_lock_file = f"{file_or_dir}.lock.lock"
-    lock_path = Path(lock_file).parent
-    lock_path.mkdir(parents=True, exist_ok=True)
-    me = multiprocessing.current_process().name
-
-    def already_existent():
-        return os.path.isfile(file_or_dir) or os.path.isdir(file_or_dir)
-
-    while not os.path.isfile(lock_file) and not already_existent():
-        try:
-            filelock_timeout = 0.1
-            with FileLock(lock_file, timeout=filelock_timeout):
-                # print(f"{me=}: {datetime.now()}")
-                # TODO: not working like this!
-                # even though I manually force flushing, still seems to be some buffering/delay in writing to the file, -> writing to file not "real-time", not thread-safe
-                # if len(read_file(lock_file))==0:
-                #     write_file(lock_file, me,do_flush=True) #
-                #     # sleep(1.0)
-                #     claimed_rights_to_write=True
-                #     print(f"{me=}: {datetime.now()}")
-
-                if not os.path.isfile(lock_lock_file) and not already_existent():
-                    write_file(lock_lock_file, me)
-                    sleep(2 * filelock_timeout)  # enforce other FileLocks to time-out!
-                    claimed_rights_to_write = True
-                break
-        except filelock._error.Timeout:
-            # pass
-            print("retry claim_write_access")
-            # sys.stdout.write(fail_message)
-            # sys.stdout.flush()
-            # fail_message = "."
-    return claimed_rights_to_write
-
-
 def retry(
     fun,
     num_retries=3,
@@ -405,7 +355,7 @@ def async_wrap_iter(it: Iterable) -> AsyncIterator:
 
 @beartype
 def iterable_to_chunks(
-    seq: Iterable, is_yieldable_chunk= lambda x: len(x) > 1
+    seq: Iterable, is_yieldable_chunk=lambda x: len(x) > 1
 ) -> Iterator[list]:
     """
     batches normally refer to fixed-size list of things

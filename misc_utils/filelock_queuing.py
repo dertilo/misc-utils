@@ -8,7 +8,6 @@ from typing import Optional, Callable, Any, TypeVar
 
 import sys
 
-import wandb
 from beartype import beartype
 from filelock import FileLock, Timeout
 from time import sleep

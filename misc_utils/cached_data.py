@@ -24,7 +24,8 @@ from misc_utils.dataclass_utils import (
     serialize_dataclass,
 )
 from misc_utils.prefix_suffix import PrefixSuffix, BASE_PATHES
-from misc_utils.utils import Singleton, claim_write_access, just_try
+from misc_utils.utils import Singleton, just_try
+from misc_utils.filelock_utils import claim_write_access
 
 
 @dataclass
