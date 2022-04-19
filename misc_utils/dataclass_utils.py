@@ -10,15 +10,32 @@ import uuid
 from dataclasses import dataclass
 from hashlib import sha1
 from typing import Any, Dict, TypeVar, Union, Optional
-
-import omegaconf
 from beartype import beartype
-from omegaconf import OmegaConf
 
 from data_io.readwrite_files import write_file, write_json
 from misc_utils.base64_utils import Base64Decoder
 from misc_utils.beartypes import Dataclass, NeStr
 from misc_utils.utils import Singleton, just_try
+
+got_omeagaconf = False
+
+
+class ImpossibleType:
+    def __new__(cls):
+        raise NotImplementedError
+
+
+try:
+    import omegaconf
+    from omegaconf import OmegaConf
+
+    got_omeagaconf = True
+    OmegaConfList = omegaconf.listconfig.ListConfig
+    OmegaConfDict = omegaconf.dictconfig.DictConfig
+except:
+    OmegaConfList = ImpossibleType
+    OmegaConfDict = ImpossibleType
+
 
 T = TypeVar("T")
 
@@ -237,12 +254,12 @@ class MyCustomEncoder(json.JSONEncoder):
         elif isinstance(obj, tuple) and hasattr(obj, "_fields"):
             # TODO: this could return any class that implements _fields method! WTF! not what I want!
             return type(obj)(*(self._asdict_inner(v, dict_factory) for v in obj))
-        elif isinstance(obj, (list, tuple, omegaconf.listconfig.ListConfig)):
-            if isinstance(obj, omegaconf.listconfig.ListConfig):
+        elif isinstance(obj, (list, tuple, OmegaConfList)):
+            if isinstance(obj, OmegaConfList):
                 obj = list(obj)
             return type(obj)(self._asdict_inner(v, dict_factory) for v in obj)
-        elif isinstance(obj, (dict, omegaconf.dictconfig.DictConfig)):
-            if isinstance(obj, omegaconf.dictconfig.DictConfig):
+        elif isinstance(obj, (dict, OmegaConfDict)):
+            if isinstance(obj, OmegaConfDict):
                 obj = dict(obj)
 
             return type(obj)(
