@@ -3,6 +3,7 @@ import collections
 import multiprocessing
 import os
 import threading
+from collections.abc import MutableMapping
 from datetime import datetime
 from pathlib import Path
 
@@ -206,12 +207,12 @@ def sanitize_hexappend_filename(filename: str) -> str:
 
 
 def flatten_nested_dict(
-    d: collections.MutableMapping, key_path: Optional[list[str]] = None, sep="_"
+    d: MutableMapping, key_path: Optional[list[str]] = None, sep="_"
 ) -> list[tuple[list[str], Any]]:
     items = []
     for k, v in d.items():
         new_key = key_path + [k] if key_path is not None else [k]
-        if isinstance(v, collections.MutableMapping):
+        if isinstance(v, MutableMapping):
             items.extend(flatten_nested_dict(v, new_key, sep=sep))
         else:
             items.append((new_key, v))

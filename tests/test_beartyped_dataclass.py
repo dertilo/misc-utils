@@ -1,21 +1,35 @@
-from misc_utils import beartyped_dataclass_patch
+import os
 from dataclasses import field, dataclass
 from typing import Annotated, List, Optional
 
 import numpy as np
-import torch
+import pytest
 from beartype import beartype
 from beartype.roar import BeartypeCallHintPepParamException
 from beartype.vale import IsAttr, IsEqual, Is
 from numpy import floating
 from numpy.typing import NDArray
 
+from misc_utils.beartypes import bear_does_roar
+
+assert os.environ.get("BEARTYPE_DATACLASSES_BASEDIR", "") != ""
 
 Numpy2DArray = Annotated[NDArray[floating], IsAttr["ndim", IsEqual[2]]]
 
 LengthyString = Annotated[str, Is[lambda text: 4 <= len(text) <= 40]]
 
-TorchTensor3D = Annotated[torch.Tensor, IsAttr["ndim", IsEqual[3]]]
+torch_is_installed = False
+try:
+    import torch
+
+    TorchTensor3D = Annotated[torch.Tensor, IsAttr["ndim", IsEqual[3]]]
+    TorchTensorFirstDimAsTwo = Annotated[
+        torch.Tensor, IsAttr["shape", Is[lambda shape: shape[0] == 2]]
+    ]
+    torch_is_installed = True
+except:
+    TorchTensor3D = None
+    TorchTensorFirstDimAsTwo = None
 
 
 @dataclass
@@ -38,12 +52,9 @@ def test_beartyped_field():
 
     _ = DataContainer(data=np.zeros((6, 3)), lenghtly_string=valid_string)
 
-    error = None
-    try:
-        _ = DataContainer(data=np.zeros((6, 3)), lenghtly_string=invalid_string)
-    except BeartypeCallHintPepParamException as e:
-        error = e
-    assert error is not None
+    assert bear_does_roar(
+        lambda: DataContainer(data=np.zeros((6, 3)), lenghtly_string=invalid_string)
+    )
 
 
 @dataclass
@@ -72,6 +83,7 @@ def dummy_fun(x: TorchTensor3D):
     pass
 
 
+@pytest.mark.skipif(not torch_is_installed, reason="torch is not installed")
 def test_torch_tensors():
     dummy_fun(torch.zeros((1, 2, 3)))
     error = None
@@ -83,16 +95,12 @@ def test_torch_tensors():
     assert error is not None and isinstance(error, BeartypeCallHintPepParamException)
 
 
-TorchTensorFirstDimAsTwo = Annotated[
-    torch.Tensor, IsAttr["shape", Is[lambda shape: shape[0] == 2]]
-]
-
-
 @beartype
 def dummy_fun_TorchTensorFirstDimAsTwo(x: TorchTensorFirstDimAsTwo):
     pass
 
 
+@pytest.mark.skipif(not torch_is_installed, reason="torch is not installed")
 def test_torch_tensors_TorchTensorFirstDimAsTwo():
     dummy_fun_TorchTensorFirstDimAsTwo(torch.zeros((2, 3)))
     try:
