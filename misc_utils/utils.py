@@ -353,10 +353,13 @@ def async_wrap_iter(it: Iterable) -> AsyncIterator:
     return yield_queue_items()
 
 
+T = TypeVar("T")
+
+
 @beartype
 def iterable_to_chunks(
-    seq: Iterable, is_yieldable_chunk=lambda x: len(x) > 1
-) -> Iterator[list]:
+    seq: Iterable[T], is_yieldable_chunk=lambda x: len(x) > 1
+) -> Iterator[list[T]]:
     """
     batches normally refer to fixed-size list of things
     chunks more relaxed/liberal, whatever size

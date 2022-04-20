@@ -90,3 +90,11 @@ def bear_does_roar(roar_trigger_fun: Callable):
     except BeartypeCallException as e:
         did_roar = True
     return did_roar
+
+
+@dataclasses.dataclass
+class BearBully:
+    ne_string: NeStr
+
+
+assert bear_does_roar(lambda: BearBully(""))

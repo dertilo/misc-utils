@@ -54,7 +54,7 @@ def beartyped_dataclass(
                 __file__.startswith(s)
                 for s in os.environ.get(
                     "BEARTYPE_DATACLASSES_BASEDIR", "cannot start with this str"
-                ).split(",")
+                ).split(":")
             ]
         )
         if (
