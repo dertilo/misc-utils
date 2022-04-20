@@ -68,8 +68,9 @@ def download_data(
         if do_raise:
             raise e
 
+
 @beartype
-def wget_file(url:str, data_folder:str, verbose=False):
+def wget_file(url: str, data_folder: str, verbose=False):
     # TODO(tilo): wget.download cannot continue ??
     err_code = os.system(
         f"wget -c -N{' -q' if not verbose else ''} -P {data_folder} {url}"

@@ -50,6 +50,7 @@ def write_json(file: str, datum: Dict, mode="wb", do_flush=False):
         if do_flush:
             f.flush()
 
+
 @beartype
 def write_file(file, s: str, mode="wb", do_flush=False):
     file = str(file)
@@ -60,8 +61,9 @@ def write_file(file, s: str, mode="wb", do_flush=False):
         if do_flush:
             f.flush()
 
+
 @beartype
-def read_file(file:str, encoding="utf-8")->str:
+def read_file(file: str, encoding="utf-8") -> str:
     file_io = (
         gzip.open(file, mode="r", encoding=encoding)
         if file.endswith(".gz")
