@@ -1,5 +1,6 @@
+from dataclasses import dataclass
 import os
-from dataclasses import field, dataclass
+from dataclasses import field
 from typing import Annotated, List, Optional
 
 import pytest
@@ -9,7 +10,6 @@ from beartype.vale import IsAttr, IsEqual, Is
 
 from misc_utils.beartypes import bear_does_roar
 
-assert os.environ.get("BEARTYPE_DATACLASSES_BASEDIR", "") != ""
 numpy_is_installed = False
 try:
     import numpy as np
@@ -55,11 +55,11 @@ class WantsALenghlyString:
 
 
 @pytest.mark.skipif(not numpy_is_installed, reason="numpy is not installed")
-def test_WantsALenghlyString():
+def test_WantsNumpy2DArray():
 
     _ = WantsNumpy2DArray(data=np.zeros((6, 3)))
 
-    assert bear_does_roar(lambda: WantsNumpy2DArray(data=np.zeros((6, 3))))
+    assert bear_does_roar(lambda: WantsNumpy2DArray(data=np.zeros((6,))))
 
 
 def test_WantsALenghlyString():

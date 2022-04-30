@@ -47,6 +47,9 @@ class Casing(str, Enum):
         else:
             raise AssertionError
 
+    @staticmethod
+    def create(value:Union[str,int]):
+        return Casing(str(value))
 
 @dataclass
 class AnotherDataClass:
@@ -219,20 +222,35 @@ def test_encode_container_of_dataclasses():
     assert all([isinstance(x.bars[0].casing, Casing) for x in dec])
 
 
-def test_endecode__dataclass():
-    bar = Bar("foo", Casing.lower, "bar")
+@pytest.mark.parametrize(
+    "casing",[
+        Casing.lower,
+        Casing.upper,
+        Casing.original,
+    ]
+)
+def test_endecode__dataclass(casing):
+    bar = Bar("foo", casing, "bar")
     foo = Foo([bar])
     d = encode_dataclass(foo)
 
     dec = decode_dataclass(d)
     assert isinstance(dec, Foo), f"{dec=}"
     assert isinstance(dec.bars[0], Bar), f"{dec=}"
+    assert isinstance(dec.bars[0].casing, Casing), f"{dec=}"
 
     dec = decode_dataclass([d, d])
     assert isinstance(dec, list)
     assert all([isinstance(x, Foo) for x in dec])
     assert all([isinstance(x.bars[0], Bar) for x in dec])
     assert all([isinstance(x.bars[0].casing, Casing) for x in dec])
+
+def test_deserialze_casing_with_int():
+    bar = Bar("foo", Casing.upper, "bar")
+    d = encode_dataclass(bar)
+    d["casing"]["value"]=int(d["casing"]["value"])
+    dec:Bar = decode_dataclass(d)
+    assert isinstance(dec.casing,Casing)
 
 
 def test_endeserialize_dataclass():
