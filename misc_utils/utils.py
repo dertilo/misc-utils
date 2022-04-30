@@ -159,6 +159,7 @@ class TimedIterable(Generic[T]):
     weight_fun: Callable[[Any], float] = lambda x: 1.0
 
     def __iter__(self) -> Iterator[T]:
+        """TODO: whatabout async iter?"""
         last_time = time()
         for x in self.iterable:
             dur = time() - last_time
@@ -282,7 +283,10 @@ def build_markdown_table(
     row_names: list[str],
     col_names: list[str],
 ):
-    rows_s = [[f"{100 * v:.1f}%" for v in r] for r in rows]
+    def rounded_percentage(v: float) -> str:
+        return f"{100 * v:.1f}%"
+
+    rows_s = [[rounded_percentage(v) for v in r] for r in rows]
     header = " | ".join([f"{row_name} \ {col_name}"] + col_names)
     line = " | ".join(["---" for _ in range(len(col_names) + 1)])
     rows = [" | ".join([name] + cols) for name, cols in zip(row_names, rows_s)]
