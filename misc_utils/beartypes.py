@@ -7,7 +7,7 @@ from beartype.vale import IsAttr, IsEqual, Is
 
 try:
     # TODO: looks somewhat ugly!
-    from numpy import floating, int16, number
+    from numpy import floating, int16, number, int32
     from numpy.typing import NDArray
 
     NumpyArray = NDArray[number]
@@ -25,6 +25,7 @@ try:
     # TODO: rename to NumpyFloatDim1, NumpyFloat32Dim1, etc
     Numpy1DArray = Annotated[NDArray[number], IsAttr["ndim", IsEqual[1]]]
     NumpyInt16Dim1 = Annotated[NDArray[int16], IsAttr["ndim", IsEqual[1]]]
+    NumpyInt32Dim1 = Annotated[NDArray[int32], IsAttr["ndim", IsEqual[1]]]
 
 except ImportError:
     print("no numpy installed!")
@@ -43,10 +44,32 @@ NeDict = Annotated[dict[T, T2], Is[lambda d: len(d.keys()) > 0]]
 
 try:
     import torch
+    from torch import (
+        float as torch_float,
+        int as torch_int,
+        tensor,
+    )
 
     TorchTensor3D = Annotated[torch.Tensor, IsAttr["ndim", IsEqual[3]]]
     TorchTensor2D = Annotated[torch.Tensor, IsAttr["ndim", IsEqual[2]]]
     TorchTensor1D = Annotated[torch.Tensor, IsAttr["ndim", IsEqual[1]]]
+
+    # https://github.com/beartype/beartype/issues/98
+    # PEP-compliant type hint matching only a floating-point PyTorch tensor.
+    TorchTensorFloat = Annotated[tensor, Is[lambda tens: tens.type() is torch_float]]
+
+    TorchTensorFloat2D = Annotated[
+        tensor, IsAttr["ndim", IsEqual[2]] & Is[lambda tens: tens.type() is torch_float]
+    ]
+
+    # PEP-compliant type hint matching only an integral PyTorch tensor.
+    TorchTensorInt = Annotated[tensor, Is[lambda tens: tens.type() is torch_int]]
+
+    # where is this from ?
+    TorchTensorFirstDimAsTwo = Annotated[
+        torch.Tensor, IsAttr["shape", Is[lambda shape: shape[0] == 2]]
+    ]
+
 except Exception as e:
     print(f"no torch!")
 
