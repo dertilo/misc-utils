@@ -282,7 +282,7 @@ def build_markdown_table(
     col_name: str,
     row_names: list[str],
     col_names: list[str],
-):
+) -> str:
     def rounded_percentage(v: float) -> str:
         return f"{100 * v:.1f}%"
 

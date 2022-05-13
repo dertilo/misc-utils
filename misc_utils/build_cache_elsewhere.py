@@ -31,7 +31,10 @@ T = TypeVar("T")
 @dataclass
 class BuildCacheElseWhere(Buildable):  # Generic[T]
     """
-    elsewhere != mainprocess!
+    elsewhere != mainprocess
+
+    misuses _is_ready mechanism to put task in queue
+
     """
 
     task: Union[_UNDEFINED, CachedData, _POISONPILL_TASK] = UNDEFINED
@@ -81,6 +84,10 @@ class BuildCacheElseWhere(Buildable):  # Generic[T]
 
 @dataclass
 class FileLockQueuedCacheBuilder(BuildCacheElseWhere):
+    """
+    puts task in filelock queue
+    """
+
     rank: Optional[int] = None
     queue_dir: Union[_UNDEFINED, PrefixSuffix] = UNDEFINED
 

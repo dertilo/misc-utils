@@ -164,6 +164,27 @@ salt = (
 )  # to prevent clashes when "merging" graphs built in different python processes, cause then objects-ids could clash!
 
 
+def fix_module_if_class_in_same_file_as_main(obj):
+    assert (
+        "PYTHONPATH" in os.environ
+    ), f"do export PYTHONPATH=${{PWD}} if you run script from __main__"
+    prefixes = os.environ["PYTHONPATH"].split(":")
+    prefixes = [  # which are not prefix of another one
+        p
+        for p in prefixes
+        if not any((pp.startswith(p) and p != pp for pp in prefixes))
+    ]
+    file_path = os.path.abspath(inspect.getsourcefile(obj.__class__))
+    file_path = file_path.replace(".py", "")
+    assert any(
+        (file_path.startswith(p) for p in prefixes)
+    ), f"{file_path=}, {prefixes=}, set PYTHONPATH if you run script from __main__"
+    for p in prefixes:
+        file_path = file_path.replace(p, "")
+    module = file_path.strip("/").replace("/", ".")
+    return module
+
+
 class MyCustomEncoder(json.JSONEncoder):
     """
     # see: https://stackoverflow.com/questions/64777931/what-is-the-recommended-way-to-include-properties-in-dataclasses-in-asdict-or-se
@@ -196,21 +217,7 @@ class MyCustomEncoder(json.JSONEncoder):
             result: list[tuple[str, Any]] = []
             module = obj.__class__.__module__
             if module == "__main__":
-                prefixes = os.environ["PYTHONPATH"].split(":")
-                prefixes = [  # which are not prefix of another one
-                    p
-                    for p in prefixes
-                    if not any((pp.startswith(p) and p != pp for pp in prefixes))
-                ]
-                file_path = os.path.abspath(inspect.getsourcefile(obj.__class__))
-                file_path = file_path.replace(".py", "")
-                assert any(
-                    (file_path.startswith(p) for p in prefixes)
-                ), f"{file_path=}, {prefixes=}, set PYTHONPATH if you run script from __main__"
-                for p in prefixes:
-                    file_path = file_path.replace(p, "")
-
-                module = file_path.strip("/").replace("/", ".")
+                module = fix_module_if_class_in_same_file_as_main(obj)
             _target_ = f"{module}.{obj.__class__.__name__}"
             self.maybe_append(result, self.class_reference_key, _target_)
             self.maybe_append(result, IDKEY, f"{salt}-{id(obj)}")

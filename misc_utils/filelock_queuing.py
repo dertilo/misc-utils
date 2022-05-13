@@ -112,6 +112,17 @@ def write_job(queue_dir: str, job: FileBasedJob):
 
 @dataclass
 class FileBasedJobQueue(Buildable):
+    """
+    FileLock-Queue
+    ──█──█──█──█──█──█──█──█
+    ──▄▀▀▀▄───────────────
+    ──█───█───────────────
+    ─███████─────────▄▀▀▄─
+    ░██─▀─██░░█▀█▀▀▀▀█░░█░
+    ░███▄███░░▀░▀░░░░░▀▀░░
+
+    """
+
     queue_dir: PrefixSuffix
 
     @property

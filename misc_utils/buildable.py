@@ -79,6 +79,7 @@ class Buildable:
 
     def _tear_down(self):
         """
+        # this is completely optional
         recursively goes through graph in same order as build
         how to handle multiple tear-down calls?
 
@@ -100,6 +101,8 @@ class Buildable:
 
     def _tear_down_self(self) -> Any:
         """
+        # this is completely optional
+
         override this if you want custom tear-down behavior
         use shape-shifting here, to prevent tear-downs are triggered multiple times
         shape-shifting: Dataclass -> dict , via: encode_dataclass(self)
