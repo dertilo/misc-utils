@@ -107,6 +107,10 @@ def read_csv(
     file_path, delimiter: str = "\t", encoding="utf-8"
 ) -> Iterable[dict[str, str]]:
     lines = read_lines(file_path, encoding=encoding)
+    yield from read_csv_lines(lines,delimiter)
+
+@beartype
+def read_csv_lines(lines:Iterable[str],delimiter:str)->Iterable[dict[str, str]]:
     it = iter(lines)
     header = next(it).split(delimiter)
     for l in it:
@@ -191,7 +195,7 @@ def read_json(file, mode="b") -> dict:
         return json.loads(s)
 
 
-# @beartype
+@beartype # TODO: why was this commented out?
 def filter_gen_targz_members(
     targz_file: str,
     is_of_interest_fun: Callable[[tarfile.TarInfo], bool],
@@ -207,7 +211,7 @@ def filter_gen_targz_members(
                 print(f"at position {k} in {targz_file}")
             member: tarfile.TarInfo
             if is_of_interest_fun(member):
-                f: tarfile.ExFileObject = tar.extractfile(member)  # type: ignore
+                f: Optional[tarfile.ExFileObject] = tar.extractfile(member)  # type: ignore
                 # https://stackoverflow.com/questions/37474767/read-tar-gz-file-in-python
                 # tarfile.extractfile() can return None if the member is neither a file nor a link.
                 neither_file_nor_link = f is None

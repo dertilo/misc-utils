@@ -1,6 +1,7 @@
 import re
 
 import os
+from typing import Optional
 
 from beartype import beartype
 
@@ -70,13 +71,22 @@ def download_data(
 
 
 @beartype
-def wget_file(url: str, data_folder: str, verbose=False):
+def wget_file(
+    url: str,
+    data_folder: str,
+    verbose=False,
+    user: Optional[str] = None,
+    password: Optional[str] = None,
+):
     # TODO(tilo): wget.download cannot continue ??
-    err_code = os.system(
-        f"wget -c -N{' -q' if not verbose else ''} -P {data_folder} {url}"
-    )
+    passw = f" --password {password} " if password is not None else ""
+    user = f' --user "{user}" ' if user is not None else ""
+    quiet = " -q " if not verbose else ""
+    cmd = f"wget -c -N{quiet}{passw}{user}-P {data_folder} {url}"
+    print(f"{cmd=}")
+    err_code = os.system(cmd)
     if err_code != 0:
-        raise FileNotFoundError(f"could not downloaded {url.split('/')[-1]}")
+        raise FileNotFoundError(f"could not download {url}")
 
 
 def main():
