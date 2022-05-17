@@ -195,12 +195,18 @@ class FileBasedWorker:
     worker_name: str = "noname"
     stop_on_error: bool = False
     wait_even_though_queue_is_empty: bool = True
+    log_to_wandb: bool = False
+    wandb_project:str="noname-project"
 
     job_queue: FileBasedJobQueue = field(init=False, repr=False)
 
     def run(self):
         print(f"worker for {self.queue_dir=}")
-        # wandb.init(project="asr-inference", name=self.worker_name)
+        if self.log_to_wandb:
+            assert "WANDB_API_KEY" in os.environ
+            import wandb
+
+            wandb.init(project=self.wandb_project, name=self.worker_name)
 
         job_queue = FileBasedJobQueue(queue_dir=self.queue_dir)
         job_queue.build()

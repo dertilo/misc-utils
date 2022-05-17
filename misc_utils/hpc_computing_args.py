@@ -12,9 +12,8 @@ class ClusterArgs:
 @dataclass
 class HPCArgs(ClusterArgs):
     run_name: str = "debug"
-    conda_env_name: str = "hfwav2vev2finetune"
+    env_dir: str = "/some_where/foo/pypoetry/virtualenvs/bla_-py3.9"  #
     code_src_dir: str = "some-base-dir"
     num_processed_per_node: int = 8
     mem_in_gb: int = 60
     max_wall_time_hours: int = 24 * 7
-    bearify_base_dir: str = "some-base-dir to bearify"
