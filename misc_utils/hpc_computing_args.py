@@ -1,5 +1,6 @@
 # pylint: disable=too-many-instance-attributes
 from dataclasses import dataclass
+from typing import Optional
 
 
 @dataclass
@@ -17,3 +18,4 @@ class HPCArgs(ClusterArgs):
     num_processed_per_node: int = 8
     mem_in_gb: int = 60
     max_wall_time_hours: int = 24 * 7
+    node_name: Optional[str] = None

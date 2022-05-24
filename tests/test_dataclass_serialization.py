@@ -22,7 +22,7 @@ from misc_utils.dataclass_utils import (
 from misc_utils.utils import Singleton
 
 
-class Casing(str, Enum):
+class TestCasing(str, Enum):
     # TODO: copy pasted this, do I really needed for testing? or move tests to text_processing!
     lower = auto()
     upper = auto()
@@ -38,18 +38,18 @@ class Casing(str, Enum):
         return {k: v for k, v in d.items() if k not in skip_keys}
 
     def apply(self, s: str) -> str:
-        if self is Casing.upper:
+        if self is TestCasing.upper:
             return s.upper()
-        elif self is Casing.lower:
+        elif self is TestCasing.lower:
             return s.lower()
-        elif self is Casing.original:
+        elif self is TestCasing.original:
             return s
         else:
             raise AssertionError
 
     @staticmethod
     def create(value: Union[str, int]):
-        return Casing(str(value))
+        return TestCasing(str(value))
 
 
 @dataclass
@@ -168,7 +168,7 @@ def test_private_field(test_object):
 @dataclass
 class Bar:
     x: str
-    casing: Optional[Casing] = None
+    casing: Optional[TestCasing] = None
     another_cache_dir: str = "bla"
 
 
@@ -187,7 +187,7 @@ def test_object_registry():
 
 
 def test_skip_keys():
-    bar = Bar(x="test", casing=Casing.lower)
+    bar = Bar(x="test", casing=TestCasing.lower)
     foo = Foo(bars=[bar, bar])
     skip_keys = [IDKEY, "cache_base", "cache_dir"]
     s = serialize_dataclass(foo, skip_keys=skip_keys)
@@ -195,7 +195,7 @@ def test_skip_keys():
 
 
 def test_deserialization_not_bothered_by_unknown_keys():
-    bar = Bar(x="test", casing=Casing.lower)
+    bar = Bar(x="test", casing=TestCasing.lower)
     d = encode_dataclass(bar)
     d["unknown_key"] = "extra-data"
     s = json.dumps(d)
@@ -213,22 +213,22 @@ def test_encode_nonencodable():
 
 
 def test_encode_container_of_dataclasses():
-    bar = Bar("foo", Casing.lower, "bar")
+    bar = Bar("foo", TestCasing.lower, "bar")
     foo = Foo([bar])
     d = encode_dataclass([foo, foo])
     dec = decode_dataclass(d)
     assert isinstance(dec, list)
     assert all([isinstance(x, Foo) for x in dec])
     assert all([isinstance(x.bars[0], Bar) for x in dec])
-    assert all([isinstance(x.bars[0].casing, Casing) for x in dec])
+    assert all([isinstance(x.bars[0].casing, TestCasing) for x in dec])
 
 
 @pytest.mark.parametrize(
     "casing",
     [
-        Casing.lower,
-        Casing.upper,
-        Casing.original,
+        TestCasing.lower,
+        TestCasing.upper,
+        TestCasing.original,
     ],
 )
 def test_endecode__dataclass(casing):
@@ -239,25 +239,25 @@ def test_endecode__dataclass(casing):
     dec = decode_dataclass(d)
     assert isinstance(dec, Foo), f"{dec=}"
     assert isinstance(dec.bars[0], Bar), f"{dec=}"
-    assert isinstance(dec.bars[0].casing, Casing), f"{dec=}"
+    assert isinstance(dec.bars[0].casing, TestCasing), f"{dec=}"
 
     dec = decode_dataclass([d, d])
     assert isinstance(dec, list)
     assert all([isinstance(x, Foo) for x in dec])
     assert all([isinstance(x.bars[0], Bar) for x in dec])
-    assert all([isinstance(x.bars[0].casing, Casing) for x in dec])
+    assert all([isinstance(x.bars[0].casing, TestCasing) for x in dec])
 
 
 def test_deserialze_casing_with_int():
-    bar = Bar("foo", Casing.upper, "bar")
+    bar = Bar("foo", TestCasing.upper, "bar")
     d = encode_dataclass(bar)
     d["casing"]["value"] = int(d["casing"]["value"])
     dec: Bar = decode_dataclass(d)
-    assert isinstance(dec.casing, Casing)
+    assert isinstance(dec.casing, TestCasing)
 
 
 def test_endeserialize_dataclass():
-    bar = Bar("foo", Casing.lower, "bar")
+    bar = Bar("foo", TestCasing.lower, "bar")
     foo = Foo([bar])
     d = serialize_dataclass(foo)
 

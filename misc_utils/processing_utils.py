@@ -18,12 +18,13 @@ from typing import TypeVar
 from beartype import beartype
 
 
-def exec_command(command):
+@beartype
+def exec_command(command: str) -> tuple[str, list]:
     with subprocess.Popen(
         command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE
     ) as p:
         stdout, stderr = p.stdout.readlines(), p.stderr.readlines()
-    return stdout, stderr
+    return str(stdout), stderr # TODO: wtf!!
 
 
 def exec_command_print_stdout(command: str):

@@ -196,7 +196,7 @@ class FileBasedWorker:
     stop_on_error: bool = False
     wait_even_though_queue_is_empty: bool = True
     log_to_wandb: bool = False
-    wandb_project:str="noname-project"
+    wandb_project: str = "noname-project"
 
     job_queue: FileBasedJobQueue = field(init=False, repr=False)
 
@@ -258,7 +258,7 @@ class FileBasedWorker:
             if error is not None:
                 write_file(
                     job.job_file(job_queue.done_dir).replace(
-                        ".json", f"{self.worker_name}_error.txt"
+                        ".json", f"-{self.worker_name}_error.txt"
                     ),
                     str(error),
                 )

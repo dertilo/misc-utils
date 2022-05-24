@@ -20,5 +20,5 @@ if __name__ == "__main__":
         # TODO: why PrefixSuffix here?
         queue_dir=PrefixSuffix("nix", queue_dir),
         log_to_wandb=log_to_wandb,
-        wandb_project=project_name
+        wandb_project=project_name,
     ).run()

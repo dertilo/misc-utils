@@ -1,4 +1,5 @@
 # pylint: skip-file
+import bz2
 import csv
 import gzip
 import itertools
@@ -107,10 +108,11 @@ def read_csv(
     file_path, delimiter: str = "\t", encoding="utf-8"
 ) -> Iterable[dict[str, str]]:
     lines = read_lines(file_path, encoding=encoding)
-    yield from read_csv_lines(lines,delimiter)
+    yield from read_csv_lines(lines, delimiter)
+
 
 @beartype
-def read_csv_lines(lines:Iterable[str],delimiter:str)->Iterable[dict[str, str]]:
+def read_csv_lines(lines: Iterable[str], delimiter: str) -> Iterable[dict[str, str]]:
     it = iter(lines)
     header = next(it).split(delimiter)
     for l in it:
@@ -121,7 +123,14 @@ def read_csv_lines(lines:Iterable[str],delimiter:str)->Iterable[dict[str, str]]:
 
 
 def build_csv_row(datum: list[Any], delimiter: str = "\t"):
-    line = json.dumps(datum).replace("[", "").replace("]", "")
+    line = (
+        json.dumps(datum, ensure_ascii=False)
+        .replace("[", "")
+        .replace(
+            "]",
+            "",
+        )
+    )
     cols = [s.strip(" ") for s in line.split(",") if len(s) > 0]
     csv_row = delimiter.join(cols)
     return csv_row
@@ -163,11 +172,14 @@ def read_lines_from_files(path: str, mode="b", encoding="utf-8", limit=None):
 def read_lines(file, encoding="utf-8", limit=None, num_to_skip=0) -> Iterator[str]:
     file = str(file)
     mode = "rb"
-    file_io = (
-        gzip.open(file, mode=mode)
-        if file.endswith(".gz")
-        else open(file, mode=mode)  # pylint: disable=consider-using-with
-    )
+    open_methods = {
+        "gz": lambda f: gzip.open(f, mode=mode),
+        "bz2": lambda f: bz2.open(f, mode=mode),
+    }
+    file_io = open_methods.get(
+        file.split(".")[-1].lower(), lambda f: open(f, mode=mode)
+    )(file)
+
     with file_io as f:
         _ = [next(f) for _ in range(num_to_skip)]
         for counter, line in enumerate(f):
@@ -195,7 +207,7 @@ def read_json(file, mode="b") -> dict:
         return json.loads(s)
 
 
-@beartype # TODO: why was this commented out?
+@beartype  # TODO: why was this commented out?
 def filter_gen_targz_members(
     targz_file: str,
     is_of_interest_fun: Callable[[tarfile.TarInfo], bool],

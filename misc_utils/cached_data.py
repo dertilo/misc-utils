@@ -136,11 +136,11 @@ class CachedData(Buildable, ABC):
             and not os.path.isdir(new_cache_dir)
             and not self.cache_base_is_blacklisted(export_black_list)
         ):
-            print(f"copy {str(self.cache_dir)} to {new_cache_root}")
             shutil.copytree(
                 str(self.cache_dir),
                 new_cache_dir,
             )
+            print(f"copied {str(self.cache_dir)} to {new_cache_root}")
 
     def cache_base_is_blacklisted(self, black_list):
         return any(

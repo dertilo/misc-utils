@@ -3,12 +3,14 @@ import os
 from setuptools import find_packages
 from setuptools import setup
 
+
 def req_file(filename, folder="./"):
     with open(os.path.join(folder, filename), encoding="utf-8") as f:
         content = f.readlines()
     # you may also want to remove whitespace characters
     # Example: `\n` at the end of each line
     return [x.strip() for x in content]
+
 
 install_requires = req_file("requirements.txt")
 

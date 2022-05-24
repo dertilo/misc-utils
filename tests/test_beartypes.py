@@ -4,6 +4,7 @@ from typing import Annotated
 # from typing_extensions import Annotated
 from beartype import beartype
 from beartype.roar import BeartypeCallHintPepParamException
+from beartype.vale import Is
 
 from misc_utils.beartypes import NeStr, Dataclass
 

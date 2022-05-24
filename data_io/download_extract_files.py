@@ -5,6 +5,8 @@ from typing import Optional
 
 from beartype import beartype
 
+from misc_utils.processing_utils import exec_command
+
 
 @beartype
 def download_data(
@@ -23,7 +25,9 @@ def download_data(
     file = data_folder + "/" + file_name
 
     def extract(extract_folder, file, build_command):
-        assert os.system(build_command(extract_folder, file)) == 0
+        cmd = build_command(extract_folder, file)
+        _, stderr = exec_command(cmd)
+        assert len(stderr) == 0, f"{cmd=}: {stderr=}"
 
     try:
         if unzip_it:
@@ -84,9 +88,10 @@ def wget_file(
     quiet = " -q " if not verbose else ""
     cmd = f"wget -c -N{quiet}{passw}{user}-P {data_folder} {url}"
     print(f"{cmd=}")
-    err_code = os.system(cmd)
-    if err_code != 0:
-        raise FileNotFoundError(f"could not download {url}")
+    download_output = exec_command(cmd)
+    print(f"{download_output=}")
+    # if err_code != 0:
+    #     raise FileNotFoundError(f"could not download {url}")
 
 
 def main():
