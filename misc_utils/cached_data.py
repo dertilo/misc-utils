@@ -152,17 +152,11 @@ class CachedData(Buildable, ABC):
 
     def _found_and_loaded_from_cache(self):
 
-        found_json = self._found_dataclass_json()
+        found_json = self._found_cached_data()
         if self.overwrite_cache:
             remove_if_exists(str(self.cache_dir))
             successfully_loaded_cached = False
         elif found_json:
-            just_try(
-                lambda: self._pre_build_load_state_fields(),
-                reraise=True,
-                verbose=True,
-                fail_print_message_builder=lambda: f"could not _load_state_fields for {type(self).__name__=}",
-            )
             self._load_cached_data()
             self._post_build_setup()
             self._maybe_export_cache()
@@ -210,21 +204,34 @@ class CachedData(Buildable, ABC):
     def _prepare(self, cache_dir: str) -> None:
         pass
 
-    def __cache_creation_is_in_process(self):
+    def _someone_else_is_writing_to_cache(self):
+        """
+        if there are lock-files this indicates that some other process/worker claimed right to write to cache
+        """
         return os.path.isfile(f"{self.cache_dir}.lock") or os.path.isfile(
             f"{self.cache_dir}.lock.lock"
         )
 
-    def _found_dataclass_json(self) -> bool:
+    def _found_cached_data(self) -> bool:
         if self.cache_dir is CREATE_CACHE_DIR_IN_BASE_DIR:
             self.cache_dir = self.create_cache_dir_from_hashed_self()
+        self._wait_until_cache_is_ready()
+        return self._check_cached_data()
+
+    def _wait_until_cache_is_ready(self):
         wait_message = f"{self.__class__.__name__}-{self.name}-{multiprocessing.current_process().name}-is waiting\n"
-        while self.__cache_creation_is_in_process():
+        while self._someone_else_is_writing_to_cache():
             print(wait_message)
             # sys.stdout.write(wait_message)
             # sys.stdout.flush()
             # wait_message = "."
             sleep(1)
+
+    def _check_cached_data(self) -> bool:
+        """
+        default is to assume that valid data is found when there is a dataclass.json file
+        you can override this method to implement whatever logic to check whether data is cached already
+        """
         return os.path.isfile(self.dataclass_json)
 
     def _claimed_right_to_build_cache(self) -> bool:
@@ -249,9 +256,15 @@ class CachedData(Buildable, ABC):
 
     def _load_cached_data(self):
         """
-        just called when cache was found
+        TODO: am I sure that I want this as default for "everyone"?
+        currently only loading this objects "state-fields" but not its children's!
         """
-        pass
+        just_try(
+            lambda: self._pre_build_load_state_fields(),
+            reraise=True,
+            verbose=True,
+            fail_print_message_builder=lambda: f"could not _load_state_fields for {type(self).__name__=}",
+        )
 
     @beartype
     def maybe_build_cache(
@@ -291,7 +304,7 @@ class CachedData(Buildable, ABC):
             remove_if_exists(f"{self.dataclass_json}.lock.lock")
             does_exist = False  # TODO wtf!
             for _ in range(3):
-                if self._found_dataclass_json():
+                if self._found_cached_data():
                     does_exist = True
                     break
                 else:
@@ -308,7 +321,11 @@ class CachedData(Buildable, ABC):
 
     def _pre_build_load_state_fields(self):
         """
-        this is getting called before _build_all_children !! so a shape-shifting child gets loaded from cache before its build is called!
+        this is getting called before _build_all_children !!
+        so a shape-shifting child gets loaded from cache before its build is called!
+        thereby the shape-shifter doesn't get the chance to rebuild/shapeshift again -> sounds good to me, expected+wanted behaviour
+        TODO: this _pre_build_load_state_fields is NOT applied for children!
+        solution would be to directly use the loaded_dc! it is loaded anyhow! which is quite strict, any invalidated "cached"-children could lead to failure of deserialization
         """
         cache_data_json = read_file(self.dataclass_json)
         loaded_dc = deserialize_dataclass(cache_data_json)
@@ -326,7 +343,12 @@ class CachedData(Buildable, ABC):
         # )
         for f in repr_fields:
             setattr(self, f.name, getattr(loaded_dc, f.name))
-        # TODO: why was I not loading input fields in the past?
+        self._check_that_loading_went_well(loaded_dc)
+
+    def _check_that_loading_went_well(self, loaded_dc):
+        """
+        currently only checks that hashes match, hashes ignore "state-fields"!!
+        """
         if hash_dataclass(self) != hash_dataclass(loaded_dc):
             write_json("loaded_dc.json", encode_dataclass(loaded_dc))
             write_json("self_dc.json", encode_dataclass(self))

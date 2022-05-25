@@ -77,7 +77,7 @@ def _just_for_backward_compatibility(path):
         return path
 
 
-def shallow_dataclass_from_dict(cls, dct: dict):
+def shallow_dataclass_from_dict(clazz, dct: dict):
     """
     NO decoding of nested dicts to nested dataclasses here!!
     is used as a "factory" in instantiate_via_importlib
@@ -85,7 +85,7 @@ def shallow_dataclass_from_dict(cls, dct: dict):
     """
     kwargs = {
         f.name: dct[f.name]
-        for f in dataclasses.fields(cls)
+        for f in dataclasses.fields(clazz)
         if (f.init and f.name in dct.keys())
     }
     # TODO: WTF!
@@ -94,13 +94,13 @@ def shallow_dataclass_from_dict(cls, dct: dict):
         kwargs["cache_dir"] = _just_for_backward_compatibility(kwargs["cache_dir"])
 
     obj = just_try(
-        lambda: cls(**kwargs),
+        lambda: clazz(**kwargs),
         reraise=True,
         verbose=True,
         print_stacktrace=False,
-        fail_print_message_builder=lambda: f"fail class: {cls.__name__=}",
+        fail_print_message_builder=lambda: f"fail class: {clazz.__name__=}",
     )
-    set_noninit_fields(cls, dct, obj)
+    set_noninit_fields(clazz, dct, obj)
     return obj
 
 

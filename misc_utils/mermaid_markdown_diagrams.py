@@ -125,14 +125,14 @@ def generate_mermaid_triples(
 def process_node_name(n):
     return n.replace("__main__.", "")
 
-
+@beartype
 def write_dataclass_to_mermaid(
     file: str, o: Dataclass, additional_skipkeys: Optional[list[str]] = None
 ):
     flow_chart = mermaid_flowchart(o, additional_skipkeys)
     write_file(file, f"```mermaid\n\n{flow_chart}```")
 
-
+@beartype
 def mermaid_flowchart(
     o: Dataclass, additional_skipkeys: Optional[list[str]] = None
 ) -> str:
