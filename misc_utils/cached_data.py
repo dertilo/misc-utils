@@ -186,7 +186,6 @@ class CachedData(Buildable, ABC):
 
     @abstractmethod
     def _build_cache(self):
-        # TODO: rename to "build_cache"
         raise NotImplementedError
 
     def _build_self(self):
@@ -359,7 +358,7 @@ class CachedData(Buildable, ABC):
     def create_cache_dir_from_hashed_self(self) -> PrefixSuffix:
         assert isinstance(
             self.cache_base, PrefixSuffix
-        ), f"{self.name},({type(self).__name__})"
+        ), f"{self.cache_base=} is not PrefixSuffix of {self.name},({type(self).__name__})"
         all_undefined_must_be_filled(self, extra_field_names=["name"])
         typed_self = type(self).__name__
         name = self.name.replace("/", "_")

@@ -39,6 +39,8 @@ except:
 
 T = TypeVar("T")
 
+# TARGET_CLASS_MAPPING=defaultdict(lambda : dict)
+
 # TODO: nice idea but IDE says NO!
 # def persistable_state_field(default=dataclasses.MISSING):
 #     """
@@ -112,9 +114,11 @@ def set_noninit_fields(cls, dct: dict, obj):
         setattr(obj, f.name, dct[f.name])
 
 
-def instantiate_via_importlib(d: dict[str, Any], class_key: str = "_cls_"):
+def instantiate_via_importlib(
+    d: dict[str, Any],
+    fullpath: str,
+):  # class_key: str = "_cls_"):
     # cause hydra cannot instantiate recursively in lists
-    fullpath = d.pop(class_key)
     *module_path, class_name = fullpath.split(".")
     module_reference = ".".join(module_path)
     if (
@@ -220,7 +224,7 @@ class MyCustomEncoder(json.JSONEncoder):
                 module = fix_module_if_class_in_same_file_as_main(obj)
             _target_ = f"{module}.{obj.__class__.__name__}"
             self.maybe_append(result, self.class_reference_key, _target_)
-            self.maybe_append(result, IDKEY, f"{salt}-{id(obj)}")
+            self.maybe_append(result, IDKEY, f"{uuid.uuid1()}-{id(obj)}")
 
             def exclude_for_hash(o, f_name: str) -> bool:
                 if self.encode_for_hash and hasattr(o, "__exclude_from_hash__"):
@@ -336,10 +340,12 @@ class MyDecoder(json.JSONDecoder):
                             write_file("dct_with_same_id.json", dct_with_same_id)
                             assert (
                                 False
-                            ), f"icdiff <(cat dct_from_obj_registry.json | jq . ) <(cat dct_with_same_id.json | jq . ) | less -r"
+                            ), f"{eid} is clashing, do: icdiff <(cat dct_from_obj_registry.json | jq . ) <(cat dct_with_same_id.json | jq . ) | less -r"
 
                 else:
-                    o = instantiate_via_importlib(dct, class_key)
+                    fullpath = dct.pop(class_key)
+                    # TODO: here some try except with lookup in TARGET_CLASS_MAPPING
+                    o = instantiate_via_importlib(dct, fullpath)
                     # if eid is not None:
                     object_registry[eid] = o
 
