@@ -320,7 +320,9 @@ def build_markdown_table_from_dicts(
     return "\n".join([header, line] + rows)
 
 
-def async_wrap_iter(it: Iterable) -> AsyncIterator:
+def async_wrap_iter(
+    it: Iterable, async_sleep_time: Optional[float] = None
+) -> AsyncIterator:
     """
     Wrap blocking iterator into an asynchronous one
     copypasted from: https://stackoverflow.com/questions/62294385/synchronous-generator-in-asyncio
@@ -333,6 +335,8 @@ def async_wrap_iter(it: Iterable) -> AsyncIterator:
 
     async def yield_queue_items():
         while True:
+            if async_sleep_time:
+                await asyncio.sleep(async_sleep_time)
             next_item = await q.get()
             if next_item is _END:
                 break
