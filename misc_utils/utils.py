@@ -381,3 +381,16 @@ def iterable_to_chunks(
 
     if len(chunk) > 0:
         yield chunk
+
+
+@beartype
+def xmls_are_semantically_equal(actual: str, expected: str) -> tuple[bool, str]:
+    from formencode.doctest_xml_compare import xml_compare
+    import xml.etree.ElementTree as etree
+
+    error = ["XML assertion failed!"]
+
+    match: bool = xml_compare(
+        etree.fromstring(actual), etree.fromstring(expected), lambda x: error.append(x)
+    )
+    return match, "\n".join(error)
