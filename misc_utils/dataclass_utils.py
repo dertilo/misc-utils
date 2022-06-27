@@ -61,24 +61,6 @@ def remove_if_exists(path):
             shutil.rmtree(path)
 
 
-def _just_for_backward_compatibility(path):
-    prefix_suffix_module = importlib.import_module("misc_utils.prefix_suffix")
-    BASE_PATHES = prefix_suffix_module.BASE_PATHES
-    # TODO: just for backward compatibility
-    if isinstance(path, str):
-        print(f"need to fix {path=}")
-        assert path.startswith(
-            BASE_PATHES["base_path"]
-        ), f"{path=} does not startswith {BASE_PATHES['base_path']}"
-        PrefixSuffix_clazz = getattr(prefix_suffix_module, "PrefixSuffix")
-
-        return PrefixSuffix_clazz(
-            "base_path", path.replace(BASE_PATHES["base_path"], "")
-        )
-    else:
-        return path
-
-
 def shallow_dataclass_from_dict(clazz, dct: dict):
     """
     NO decoding of nested dicts to nested dataclasses here!!
@@ -90,11 +72,8 @@ def shallow_dataclass_from_dict(clazz, dct: dict):
         for f in dataclasses.fields(clazz)
         if (f.init and f.name in dct.keys())
     }
-    # TODO: WTF!
-    if "cache_base" in kwargs:
-        kwargs["cache_base"] = _just_for_backward_compatibility(kwargs["cache_base"])
-        kwargs["cache_dir"] = _just_for_backward_compatibility(kwargs["cache_dir"])
-
+    # print(f"{dct=}")
+    # print(f"{kwargs=}")
     obj = just_try(
         lambda: clazz(**kwargs),
         reraise=True,
@@ -121,12 +100,12 @@ def instantiate_via_importlib(
     # cause hydra cannot instantiate recursively in lists
     *module_path, class_name = fullpath.split(".")
     module_reference = ".".join(module_path)
-    if (
-        class_name == "PrefixSuffix"
-        and module_reference == "misc_utils.dataclass_utils"
-    ):
-        # TODO: hack for backward compatibility
-        module_reference = "misc_utils.prefix_suffix"
+    # if (
+    #     class_name == "PrefixSuffix"
+    #     and module_reference == "misc_utils.dataclass_utils"
+    # ):
+    #     # TODO: hack for backward compatibility
+    #     module_reference = "misc_utils.prefix_suffix"
 
     clazz = getattr(importlib.import_module(module_reference), class_name)
     if hasattr(clazz, "create"):
@@ -143,17 +122,20 @@ CLASS_REF_NO_INSTANTIATE = "_python_dataclass_"  # use this to prevent instantia
 UNSERIALIZABLE = "<UNSERIALIZABLE>"
 
 
-def hash_dataclass(dc: Dataclass):
-    """
-    under, dunder and __exclude_from_hash__ fields are not hashed!
-    """
-    skip_keys = [
+def hash_dataclass(
+    dc: Dataclass,
+    skip_keys=[
         IDKEY,
         "cache_base",
         "cache_dir",
         "use_hash_suffix",
         "overwrite_cache",
-    ] + [f.name for f in dataclasses.fields(dc) if is_dunder(f.name)]
+    ],
+) -> str:
+    """
+    under, dunder and __exclude_from_hash__ fields are not hashed!
+    """
+    skip_keys += [f.name for f in dataclasses.fields(dc) if is_dunder(f.name)]
     s = serialize_dataclass(dc, skip_keys=skip_keys, encode_for_hash=True)
     hashed_self = sha1(s.encode("utf-8")).hexdigest()
     return hashed_self
@@ -197,13 +179,36 @@ class MyCustomEncoder(json.JSONEncoder):
     class_reference_key = "_target_"
     skip_undefined = True
     encode_for_hash = False
+    sparse: bool = False
     is_special = re.compile(
         r"^__[^\d\W]\w*__\Z", re.UNICODE
     )  # Dunder name. -> field from stackoverflow
     skip_keys: Optional[list[str]] = None
 
+    def sparse_dict(self, key_value: list[tuple[str, Any]]):
+        """
+        TODO
+        """
+        dct = dict(key_value)
+        if IDKEY in dct.keys():
+            obj_id = dct[IDKEY]
+            if obj_id in self._object2node_id:
+                node_id = self._object2node_id[obj_id]
+            else:
+                node_id = f"{len(self._id2node_.keys())}"
+                self._object2node_id[obj_id] = node_id
+                self._id2node_[node_id] = dct
+
+        return {"_node_id_": node_id}
+
     def default(self, o):
-        return self._asdict(o)
+        if self.sparse:
+            self._object2node_id = dict()
+            self._id2node_ = dict()
+        dct = self._asdict(o, dict_factory=self.sparse_dict if self.sparse else dict)
+        if self.sparse:
+            dct["_id2node_"] = self._id2node_
+        return dct
 
     def _asdict(self, obj, *, dict_factory=dict):
         # if not (dataclasses.is_dataclass(obj) or isinstance(obj, DictConfig)):
@@ -222,9 +227,13 @@ class MyCustomEncoder(json.JSONEncoder):
             module = obj.__class__.__module__
             if module == "__main__":
                 module = fix_module_if_class_in_same_file_as_main(obj)
-            _target_ = f"{module}.{obj.__class__.__name__}"
+            clazz_name = obj.__class__.__name__
+            _target_ = f"{module}.{clazz_name}"
             self.maybe_append(result, self.class_reference_key, _target_)
-            self.maybe_append(result, IDKEY, f"{uuid.uuid1()}-{id(obj)}")
+            clazz_name_hash = sha1(clazz_name.encode("utf-8")).hexdigest()
+            hash = f"{salt}-{id(obj)}-{clazz_name_hash}"
+
+            self.maybe_append(result, IDKEY, f"{hash}")
 
             def exclude_for_hash(o, f_name: str) -> bool:
                 if self.encode_for_hash and hasattr(o, "__exclude_from_hash__"):
@@ -313,6 +322,8 @@ class MyDecoder(json.JSONDecoder):
             if class_key is not None and IDKEY in dct:
                 assert class_key in dct, f"{class_key=} not in dct"
                 # if IDKEY in dct:
+                # TODO: maybe one should not rely on object id here, cause in different python-processes they will obviously have different ids
+                # what about hash_dataclass(o) ? well actually we do not yet have dataclass yet, but dict
                 eid = dct.pop(IDKEY)
                 # else:
                 #     eid = None
@@ -322,6 +333,7 @@ class MyDecoder(json.JSONDecoder):
                     just_for_backward_compatibility = [
                         "use_hash_suffix",
                         "overwrite_cache",
+                        "limit"
                     ]
                     dct_from_obj_registry = serialize_dataclass(
                         o, skip_keys=[IDKEY] + just_for_backward_compatibility
@@ -409,11 +421,17 @@ def serialize_dataclass(
     skip_undefined=True,
     skip_keys: Optional[list[str]] = None,
     encode_for_hash: bool = False,
+    sparse: bool = False,
 ) -> str:
     return json.dumps(
         encode_dataclass(
-            d, class_reference_key, skip_undefined, skip_keys, encode_for_hash
-        )
+            d,
+            class_reference_key,
+            skip_undefined,
+            skip_keys,
+            sparse=sparse,
+            encode_for_hash=encode_for_hash,
+        ),ensure_ascii=False
     )
 
 
@@ -423,6 +441,7 @@ def encode_dataclass(
     class_reference_key="_target_",
     skip_undefined: bool = True,
     skip_keys: Optional[list[str]] = None,
+    sparse: bool = False,
     encode_for_hash: bool = False,
 ) -> Union[dict, list, tuple, set]:
     """
@@ -431,6 +450,7 @@ def encode_dataclass(
     MyCustomEncoder.class_reference_key = class_reference_key
     MyCustomEncoder.skip_undefined = skip_undefined
     MyCustomEncoder.skip_keys = skip_keys
+    MyCustomEncoder.sparse = sparse
     MyCustomEncoder.encode_for_hash = encode_for_hash
     return MyCustomEncoder().default(d)
 
