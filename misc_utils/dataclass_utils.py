@@ -333,7 +333,7 @@ class MyDecoder(json.JSONDecoder):
                     just_for_backward_compatibility = [
                         "use_hash_suffix",
                         "overwrite_cache",
-                        "limit"
+                        "limit",
                     ]
                     dct_from_obj_registry = serialize_dataclass(
                         o, skip_keys=[IDKEY] + just_for_backward_compatibility
@@ -431,7 +431,8 @@ def serialize_dataclass(
             skip_keys,
             sparse=sparse,
             encode_for_hash=encode_for_hash,
-        ),ensure_ascii=False
+        ),
+        ensure_ascii=False,
     )
 
 

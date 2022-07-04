@@ -192,21 +192,22 @@ NUM_RETRIES = int(os.environ.get("NUM_RETRIES", 3))
 @dataclass
 class FileBasedWorker:
     queue_dir: PrefixSuffix
-    worker_name: str = "noname"
+    run_name: str = "noname"
     stop_on_error: bool = False
-    wait_even_though_queue_is_empty: bool = True
-    log_to_wandb: bool = False
-    wandb_project: str = "noname-project"
+    max_wait_on_empty_queue: Optional[float] = (
+        30 * 60
+    )  # after 30 minutes idling tear-down the worker
+    wandb_project: Optional[str] = None
 
     job_queue: FileBasedJobQueue = field(init=False, repr=False)
 
     def run(self):
         print(f"worker for {self.queue_dir=}")
-        if self.log_to_wandb:
+        if self.wandb_project:
             assert "WANDB_API_KEY" in os.environ
             import wandb
 
-            wandb.init(project=self.wandb_project, name=self.worker_name)
+            wandb.init(project=self.wandb_project, name=self.run_name)
 
         job_queue = FileBasedJobQueue(queue_dir=self.queue_dir)
         job_queue.build()
@@ -224,16 +225,20 @@ class FileBasedWorker:
                 idle_counter = 0
             else:
                 idle_counter += 1
+                idle_time = idle_counter * wait_time
 
-                if self.wait_even_though_queue_is_empty:
-                    sys.stdout.write(f"\r idle for {idle_counter*wait_time} seconds")
+                if (
+                    self.max_wait_on_empty_queue
+                    and self.max_wait_on_empty_queue > idle_time
+                ):
+                    sys.stdout.write(f"\r idle for {idle_time} seconds")
                     sys.stdout.flush()
                     sleep(wait_time)
                     continue
                 else:
                     break
 
-    def _process_job(self, job, job_queue: FileBasedJobQueue):
+    def _process_job(self, job, job_queue: FileBasedJobQueue) -> bool:
         error = None
         got_poisoned = False
 
@@ -258,7 +263,7 @@ class FileBasedWorker:
             if error is not None:
                 write_file(
                     job.job_file(job_queue.done_dir).replace(
-                        ".json", f"-{self.worker_name}_error.txt"
+                        ".json", f"-{self.run_name}_error.txt"
                     ),
                     str(error),
                 )

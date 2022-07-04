@@ -16,7 +16,10 @@ T = TypeVar("T")
 
 
 @dataclass
-class CachedDataclasses(Iterable[T], CachedData):
+class CachedDicts(CachedData, Iterable[T]):
+    """
+    coupling with source-code less strong -> use it for "longer" living data
+    """
 
     jsonl_file_name: ClassVar[str] = "data.jsonl.gz"
 
@@ -27,14 +30,24 @@ class CachedDataclasses(Iterable[T], CachedData):
     def _build_cache(self):
         write_jsonl(
             self.jsonl_file,
-            self.generate_dicts_to_cache(),
+            self._generate_dicts_to_cache(),
         )
 
+    @abstractmethod
+    def _generate_dicts_to_cache(self) -> Iterator[dict]:
+        raise NotImplementedError
+
+
+@dataclass
+class CachedDataclasses(CachedDicts, Iterable[T]):
+    """
+    this has a strong coupling with source-code -> use it for short-lived / very volatile cache!
+    """
     @abstractmethod
     def generate_dataclasses_to_cache(self) -> Iterator[T]:
         raise NotImplementedError
 
-    def generate_dicts_to_cache(self) -> Iterator[dict]:
+    def _generate_dicts_to_cache(self) -> Iterator[dict]:
         yield from (
             encode_dataclass(o)
             for o in tqdm(

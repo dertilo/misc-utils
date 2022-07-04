@@ -64,7 +64,8 @@ class Buildable:
 
     def _build_all_chrildren(self):
         for f in fields(self):
-            if f.init:
+            is_argument_of_dataclasses_init_method = f.init
+            if is_argument_of_dataclasses_init_method:
                 obj = getattr(self, f.name)
                 if isinstance(obj, Buildable):
                     # whoho! black-magic here! the child can overwrite itself and thereby shape-shift completely!
