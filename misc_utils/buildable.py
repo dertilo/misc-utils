@@ -4,10 +4,14 @@ from typing import Any, Generic, TypeVar, final
 
 from beartype import beartype
 from time import time
-
+import os
 from misc_utils.dataclass_utils import (
     all_undefined_must_be_filled,
 )
+
+DEBUG_MEMORY_LEAK = os.environ.get("DEBUG_MEMORY_LEAK", "False").lower() != "false"
+if DEBUG_MEMORY_LEAK:
+    print(f"DEBUGGING MODE in {__name__}")
 
 
 @dataclass
@@ -141,6 +145,16 @@ class BuildableContainer(Generic[T], Buildable):
             raise NotImplementedError
 
 
+if DEBUG_MEMORY_LEAK:
+    """
+    usefull to find memory leaks when build multiple objects via BuildableList
+    """
+    from pympler.tracker import SummaryTracker
+
+    tracker = SummaryTracker()
+    import objgraph
+
+
 @dataclass
 class BuildableList(Buildable, list[T]):
     """
@@ -155,10 +169,16 @@ class BuildableList(Buildable, list[T]):
         self.extend(self.data)
 
     def _build_self(self):
+        if DEBUG_MEMORY_LEAK:
+            tracker.print_diff()
         print(f"triggered build for {self.__class__.__name__}")
         for k, obj in enumerate(self):
             if isinstance(obj, Buildable):
                 self[k] = obj.build()
+                if DEBUG_MEMORY_LEAK:
+                    tracker.print_diff()
+                    # objgraph.show_most_common_types(limit=20)
+                    # breakpoint()
 
     def _tear_down_all_chrildren(self):
         self.data = [x._tear_down() for x in self.data]

@@ -3,7 +3,13 @@ from abc import abstractmethod
 from dataclasses import dataclass
 from typing import Iterable, ClassVar, Iterator, Any, TypeVar
 
-from data_io.readwrite_files import write_jsonl, read_jsonl, read_lines, write_lines
+from data_io.readwrite_files import (
+    write_jsonl,
+    read_jsonl,
+    read_lines,
+    write_lines,
+    write_dicts_to_csv,
+)
 from misc_utils.cached_data import CachedData
 from misc_utils.dataclass_utils import (
     encode_dataclass,
@@ -30,11 +36,37 @@ class CachedDicts(CachedData, Iterable[T]):
     def _build_cache(self):
         write_jsonl(
             self.jsonl_file,
-            self._generate_dicts_to_cache(),
+            tqdm(self._generate_dicts_to_cache(),desc=f"{self.name} is writing jsonl"),
         )
 
     @abstractmethod
     def _generate_dicts_to_cache(self) -> Iterator[dict]:
+        raise NotImplementedError
+
+    def __iter__(self) -> Iterator[dict]:
+        yield from read_jsonl(self.jsonl_file)
+
+
+@dataclass
+class CachedCsv(CachedData, Iterable[T]):
+    """
+    coupling with source-code less strong -> use it for "longer" living data
+    """
+
+    data_file_name: ClassVar[str] = "data.csv.gz"
+
+    @property
+    def data_file(self):
+        return self.prefix_cache_dir(self.data_file_name)
+
+    def _build_cache(self):
+        write_dicts_to_csv(
+            self.data_file,
+            self._generate_rows_to_cache(),
+        )
+
+    @abstractmethod
+    def _generate_rows_to_cache(self) -> Iterator[dict]:
         raise NotImplementedError
 
 
@@ -43,6 +75,7 @@ class CachedDataclasses(CachedDicts, Iterable[T]):
     """
     this has a strong coupling with source-code -> use it for short-lived / very volatile cache!
     """
+
     @abstractmethod
     def generate_dataclasses_to_cache(self) -> Iterator[T]:
         raise NotImplementedError
