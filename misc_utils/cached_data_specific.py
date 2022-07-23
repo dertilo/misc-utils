@@ -36,7 +36,7 @@ class CachedDicts(CachedData, Iterable[T]):
     def _build_cache(self):
         write_jsonl(
             self.jsonl_file,
-            tqdm(self._generate_dicts_to_cache(),desc=f"{self.name} is writing jsonl"),
+            tqdm(self._generate_dicts_to_cache(), desc=f"{self.name} is writing jsonl"),
         )
 
     @abstractmethod

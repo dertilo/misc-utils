@@ -91,13 +91,16 @@ def write_lines(file, lines: Iterable[str], mode="wb"):
 
 @beartype
 def write_csv(
-    file, data: Iterable[list[Any]], header: list[str], delimiter: str = "\t"
+    file,
+    data: Iterable[list[Any]],
+    header: Optional[list[str]] = None,
+    delimiter: str = "\t",
 ):
     file = str(file)
     write_lines(
         file,
         itertools.chain(
-            [delimiter.join(header)],
+            [delimiter.join(header)] if header is not None else [],
             (build_csv_row(d, delimiter=delimiter) for d in data),
         ),
     )
@@ -105,19 +108,24 @@ def write_csv(
 
 @beartype
 def read_csv(
-    file_path, delimiter: str = "\t", encoding="utf-8"
-) -> Iterable[dict[str, str]]:
+    file_path, delimiter: str = "\t", encoding="utf-8", use_json_loads: bool = True
+) -> Iterable[dict]:  # TODO: json.loads should recognize int/float
     lines = read_lines(file_path, encoding=encoding)
-    yield from read_csv_lines(lines, delimiter)
+    yield from read_csv_lines(lines, delimiter, use_json_loads=use_json_loads)
 
 
 @beartype
-def read_csv_lines(lines: Iterable[str], delimiter: str) -> Iterable[dict[str, str]]:
+def read_csv_lines(
+    lines: Iterable[str], delimiter: str, use_json_loads: bool = True
+) -> Iterable[dict]:
     it = iter(lines)
-    header = next(it).split(delimiter)
+    header = [h for h in next(it).replace("\r", "").split(delimiter) if len(h) > 0]
     for l in it:
-        s = f'[{",".join(l.split(delimiter))}]'
-        row = json.loads(s)
+        l = l.replace("\r", "")
+        row = l.split(delimiter)
+        if use_json_loads:
+            s = f'[{",".join(row)}]'
+            row = json.loads(s)
         assert len(row) == len(header), f"{header=}, {row=}"
         yield {col: row[k] for k, col in enumerate(header)}
 
@@ -187,7 +195,8 @@ def read_lines(file, encoding="utf-8", limit=None, num_to_skip=0) -> Iterator[st
                 break
             if "b" in mode:
                 line = line.decode(encoding)
-            yield line.replace("\n", "")
+            line = line.replace("\n", "").replace("\r", "")
+            yield line
 
 
 def read_jsonl(

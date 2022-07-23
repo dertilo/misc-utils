@@ -12,17 +12,17 @@ from misc_utils.processing_utils import exec_command
 def download_data(
     base_url: str,
     file_name: str,
-    data_folder: str,
+    data_dir: str,
     verbose: bool = False,
     unzip_it: bool = False,
     do_raise: bool = True,
     remove_zipped: bool = False,
-):
-    if not os.path.exists(data_folder):
-        os.makedirs(data_folder, exist_ok=True)
+) -> Optional[str]:
+    if not os.path.exists(data_dir):
+        os.makedirs(data_dir, exist_ok=True)
 
     url = base_url + "/" + file_name
-    file = data_folder + "/" + file_name
+    file = data_dir + "/" + file_name
 
     def extract(extract_folder, file, build_command):
         cmd = build_command(extract_folder, file)
@@ -60,15 +60,15 @@ def download_data(
                 raise NotImplementedError
 
             if not os.path.isdir(extract_folder):
-                wget_file(url, data_folder, verbose)
+                wget_file(url, data_dir, verbose)
                 os.makedirs(extract_folder, exist_ok=True)
                 extract(extract_folder, file, build_command)
                 if remove_zipped:
                     os.remove(file)
-
+            return extract_folder
         else:
             if not os.path.isfile(file):
-                wget_file(url, data_folder, verbose)
+                wget_file(url, data_dir, verbose)
     except FileNotFoundError as e:
         if do_raise:
             raise e
@@ -86,10 +86,11 @@ def wget_file(
     passw = f" --password {password} " if password is not None else ""
     user = f' --user "{user}" ' if user is not None else ""
     quiet = " -q " if not verbose else ""
-    cmd = f"wget -c -N{quiet}{passw}{user}-P {data_folder} {url}"
+    cmd = f"wget -c -N{quiet}{passw}{user} -P {data_folder} {url}"
     print(f"{cmd=}")
-    download_output = exec_command(cmd)
-    print(f"{download_output=}")
+    os.system(cmd)
+    # TODO: why is subprocess not working?
+    # download_output = exec_command(cmd)
     # if err_code != 0:
     #     raise FileNotFoundError(f"could not download {url}")
 
