@@ -1,5 +1,8 @@
 import importlib
 import sys
+from pprint import pprint
+
+from data_io.readwrite_files import write_file
 
 sys.path.append(".")
 import json
@@ -270,6 +273,19 @@ def test_None():
     assert bear_does_roar(lambda: deserialize_dataclass(None))
     assert bear_does_roar(lambda: encode_dataclass(None))
     assert bear_does_roar(lambda: serialize_dataclass(None))
+
+# TODO
+# def test_sparse_dataclass():
+#     bar = Bar("foo", TestCasing.lower, "bar")
+#     foo = Foo([bar, bar])
+#     # d = encode_dataclass(foo,sparse=True)
+#     write_file("test.json", serialize_dataclass(foo, sparse=True))
+#     # pprint(f"{d=}")
+#     # dec = decode_dataclass(d)
+#     # assert isinstance(dec, list)
+#     # assert all([isinstance(x, Foo) for x in dec])
+#     # assert all([isinstance(x.bars[0], Bar) for x in dec])
+#     # assert all([isinstance(x.bars[0].casing, TestCasing) for x in dec])
 
 
 if __name__ == "__main__":

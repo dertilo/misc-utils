@@ -55,5 +55,5 @@ def enter_keyboard_input(
 
 
 def click_it(wd, xpath):
-    element = wd.find_element_by_xpath(xpath)
+    element = wd.find_element(by=By.XPATH, value=xpath)
     element.click()

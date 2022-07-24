@@ -274,7 +274,8 @@ class CachedData(Buildable, ABC):
 
         if self._claimed_right_to_build_cache():
             cadi = str(self.cache_dir)
-            remove_make_dir(cadi)
+            # remove_make_dir(cadi)
+            os.makedirs(dirr, exist_ok=False) # more safe this way! one has to manually remove if somehow already existing!
             error = None
             try:
                 # start = time()

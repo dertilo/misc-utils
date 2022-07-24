@@ -17,6 +17,7 @@ from misc_utils.dataclass_utils import (
 )
 from misc_utils.utils import just_try
 from tqdm import tqdm
+import os
 
 T = TypeVar("T")
 
@@ -95,6 +96,9 @@ class CachedDataclasses(CachedDicts, Iterable[T]):
 
 @dataclass
 class ContinuedCachedData(CachedData):
+    """
+    TODO: is this really needed? better just use Buildable instead!
+    """
     clean_on_fail: bool = dataclasses.field(default=False, repr=False)
 
     @property
@@ -105,8 +109,18 @@ class ContinuedCachedData(CachedData):
         """
         return self._was_built
 
+    def _claimed_right_to_build_cache(self) -> bool:
+        return False
+
     def _build_cache(self):
-        print(f"start from scratch in {self.cache_dir}")
+        raise NotImplementedError
+
+    def _check_cached_data(self) -> bool:
+        os.makedirs(str(self.cache_dir), exist_ok=True)
+        return True
+
+    def _pre_build_load_state_fields(self):
+        pass
 
     def _post_build_setup(self):
         print(f"continue in {self.cache_dir}")
@@ -154,6 +168,10 @@ class ContinuedCachedDicts(ContinuedCachedData, Iterable[dict]):
 
 @dataclass
 class ContinuedCachedDataclasses(ContinuedCachedDicts):
+    """
+    please only use this if cache is very short-lived! -> otherwise ContinuedCachedDicts more robust!
+    """
+
     @abstractmethod
     def generate_dataclasses_to_cache(self) -> Iterator[T]:
         """
