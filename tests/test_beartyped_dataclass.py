@@ -9,6 +9,7 @@ from beartype.roar import BeartypeCallHintPepParamException
 from beartype.vale import IsAttr, IsEqual, Is
 
 from misc_utils.beartypes import bear_does_roar
+from misc_utils.dataclass_utils import UNDEFINED, FillUndefined
 
 numpy_is_installed = False
 try:
@@ -69,6 +70,32 @@ def test_WantsALenghlyString():
     _ = WantsALenghlyString(lenghtly_string=valid_string)
 
     assert bear_does_roar(lambda: WantsALenghlyString(lenghtly_string=invalid_string))
+
+
+@dataclass
+class GotUndefined(FillUndefined):
+    param: int = UNDEFINED
+    another_param: int = "wrong type"
+
+
+def test_GotUndefined():
+    """
+    TODO: bear is not roaring when defaults are of wrong type!
+    """
+
+    valid_param = 42
+
+    _ = GotUndefined(param=valid_param)
+
+    err = False
+    try:
+        GotUndefined()
+    except AssertionError as e:
+        err = True
+    assert err == True
+
+    # not working
+    # assert not bear_does_roar(lambda: GotUndefined())
 
 
 @dataclass

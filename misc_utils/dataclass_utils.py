@@ -489,9 +489,10 @@ def all_undefined_must_be_filled(obj, extra_field_names: Optional[list[str]] = N
     ):  # property overwritten by field still not listed in dataclasses.fields!
         field_names += extra_field_names
     for f_name in field_names:
-        assert (
-            getattr(obj, f_name) is not UNDEFINED
-        ), f"{f_name=} of {obj.name if hasattr(obj,'name') else obj} ({type(obj)}) is UNDEFINED!"
+        if getattr(obj, f_name) is UNDEFINED:
+            raise AssertionError(
+                f"{f_name=} of {obj.name if hasattr(obj,'name') else obj} ({type(obj)}) is UNDEFINED!"
+            )
 
 
 @dataclass
