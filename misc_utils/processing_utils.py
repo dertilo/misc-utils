@@ -94,9 +94,6 @@ def process_with_threadpool(
             yield future.result()
 
 
-# TODO: stupid multiprocessing Pool does not know back-pressure!!!
-# see: https://stackoverflow.com/questions/30448267/multiprocessing-pool-imap-unordered-with-fixed-queue-size-or-buffer
-
 
 @beartype
 def process_with_threadpool_backpressure(
@@ -105,6 +102,9 @@ def process_with_threadpool_backpressure(
     max_workers=1,
     batch_size: int = 1,
 ):
+    # TODO: stupid multiprocessing Pool does not know back-pressure!!!
+    # see: https://stackoverflow.com/questions/30448267/multiprocessing-pool-imap-unordered-with-fixed-queue-size-or-buffer
+
     it = iter(iterable_to_batches(data, batch_size=batch_size))
 
     with cf.ThreadPoolExecutor(max_workers=max_workers) as executor:

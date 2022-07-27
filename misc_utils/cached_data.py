@@ -63,6 +63,11 @@ export_black_list = [
 
 @dataclass
 class CachedData(Buildable, ABC):
+    """
+    use this for short-lived "cache" only!
+    for long-lived data better simply use Buildable + is_ready for checking validity of data
+    long-lived data: you don't want/need different versions, use_hash_suffix=False!
+    """
     # str for backward compatibility
     cache_base: Union[
         _IGNORE_THIS_USE_CACHE_DIR, PrefixSuffix
@@ -274,8 +279,7 @@ class CachedData(Buildable, ABC):
 
         if self._claimed_right_to_build_cache():
             cadi = str(self.cache_dir)
-            # remove_make_dir(cadi)
-            os.makedirs(dirr, exist_ok=False) # more safe this way! one has to manually remove if somehow already existing!
+            remove_make_dir(cadi)
             error = None
             try:
                 # start = time()

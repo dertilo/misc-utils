@@ -6,8 +6,7 @@ from beartype import beartype
 from time import time
 import os
 from misc_utils.dataclass_utils import (
-    all_undefined_must_be_filled,
-)
+    all_undefined_must_be_filled, )
 
 DEBUG_MEMORY_LEAK = os.environ.get("DEBUG_MEMORY_LEAK", "False").lower() != "false"
 if DEBUG_MEMORY_LEAK:
@@ -152,7 +151,6 @@ if DEBUG_MEMORY_LEAK:
     from pympler.tracker import SummaryTracker
 
     tracker = SummaryTracker()
-    import objgraph
 
 
 @dataclass

@@ -1,7 +1,7 @@
 import re
 
 import os
-from typing import Optional
+from typing import Optional, Callable
 
 from beartype import beartype
 
@@ -24,10 +24,6 @@ def download_data(
     url = base_url + "/" + file_name
     file = data_dir + "/" + file_name
 
-    def extract(extract_folder, file, build_command):
-        cmd = build_command(extract_folder, file)
-        _, stderr = exec_command(cmd)
-        assert len(stderr) == 0, f"{cmd=}: {stderr=}"
 
     try:
         if unzip_it:
@@ -36,33 +32,10 @@ def download_data(
             extract_folder = re.sub(regex, "", file)
             assert extract_folder != file
 
-            if any(file.endswith(suf) for suf in [".zip", ".ZIP"]):
-
-                def build_command(dirr, file):
-                    return f"unzip -d {dirr} {file}"
-
-            elif any(file.endswith(suf) for suf in [".tar.gz", ".tgz"]):
-
-                def build_command(dirr, file):
-                    return f"tar xzf {file} -C {dirr}"
-
-            elif any(file.endswith(suf) for suf in [".tar", ".TAR"]):
-
-                def build_command(dirr, file):
-                    return f"tar xf {file} -C {dirr}"
-
-            elif any(file.endswith(suf) for suf in [".gz", ".GZ"]):
-
-                def build_command(dirr, file):
-                    return f"gzip -dc {file} {dirr}"
-
-            else:
-                raise NotImplementedError
-
             if not os.path.isdir(extract_folder):
                 wget_file(url, data_dir, verbose)
                 os.makedirs(extract_folder, exist_ok=True)
-                extract(extract_folder, file, build_command)
+                extract_file(file,extract_folder, get_build_extract_command_fun(file))
                 if remove_zipped:
                     os.remove(file)
             return extract_folder
@@ -73,6 +46,36 @@ def download_data(
         if do_raise:
             raise e
 
+
+def get_build_extract_command_fun(file:str):
+    if any(file.endswith(suf) for suf in [".zip", ".ZIP"]):
+
+        def fun(dirr, file):
+            return f"unzip -d {dirr} {file}"
+
+    elif any(file.endswith(suf) for suf in [".tar.gz", ".tgz"]):
+
+        def fun(dirr, file):
+            return f"tar xzf {file} -C {dirr}"
+
+    elif any(file.endswith(suf) for suf in [".tar", ".TAR"]):
+
+        def fun(dirr, file):
+            return f"tar xf {file} -C {dirr}"
+
+    elif any(file.endswith(suf) for suf in [".gz", ".GZ"]):
+
+        def fun(dirr, file):
+            return f"gzip -dc {file} {dirr}"
+
+    else:
+        raise NotImplementedError
+    return fun
+
+def extract_file(file, extract_folder, build_extract_command_fun:Callable):
+    cmd = build_extract_command_fun(extract_folder, file)
+    _, stderr = exec_command(cmd)
+    assert len(stderr) == 0, f"{cmd=}: {stderr=}"
 
 @beartype
 def wget_file(
@@ -86,7 +89,7 @@ def wget_file(
     passw = f" --password {password} " if password is not None else ""
     user = f' --user "{user}" ' if user is not None else ""
     quiet = " -q " if not verbose else ""
-    cmd = f"wget -c -N{quiet}{passw}{user} -P {data_folder} {url}"
+    cmd = f"wget --trust-server-names -c -N{quiet}{passw}{user} -P {data_folder} {url}"
     print(f"{cmd=}")
     os.system(cmd)
     # TODO: why is subprocess not working?
