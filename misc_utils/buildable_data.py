@@ -1,10 +1,10 @@
 from abc import abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 from misc_utils.buildable import Buildable
 from misc_utils.dataclass_utils import UNDEFINED
-from misc_utils.prefix_suffix import PrefixSuffix
+from misc_utils.prefix_suffix import PrefixSuffix, BASE_PATHES
 
 
 @dataclass
@@ -13,10 +13,10 @@ class BuildableData(Buildable):
     use this for long-lived cache!
     """
 
-    base_dir: PrefixSuffix = UNDEFINED
+    base_dir: PrefixSuffix = field(default_factory=lambda: BASE_PATHES["raw_data"])
 
     @property
-    def data_dir(self):
+    def data_dir(self) -> str:
         return f"{self.base_dir}/{self.name}"
 
     @property
@@ -32,6 +32,9 @@ class BuildableData(Buildable):
         return is_valid
 
     def _load_data(self):
+        """
+        if you want this to be run "always" also after _build_data do call it there yourself!
+        """
         pass
 
     @property

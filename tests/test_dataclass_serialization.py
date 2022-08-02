@@ -274,6 +274,7 @@ def test_None():
     assert bear_does_roar(lambda: encode_dataclass(None))
     assert bear_does_roar(lambda: serialize_dataclass(None))
 
+
 # TODO
 # def test_sparse_dataclass():
 #     bar = Bar("foo", TestCasing.lower, "bar")

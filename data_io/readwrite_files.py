@@ -7,6 +7,7 @@ import json
 import locale
 import os
 import re
+import sys
 import tarfile
 from typing import Dict, Iterator, Callable, Optional, Tuple, TypeVar, Any, Union
 from typing import Iterable
@@ -229,7 +230,7 @@ def filter_gen_targz_members(
     with tarfile.open(targz_file, "r:gz") as tar:
         for k, member in enumerate(itertools.islice(tar, start, stop)):
             if verbose and k % 10_000 == 0:
-                print(f"at position {k} in {targz_file}")
+                print(f"at position {k} in {targz_file}\n")
             member: tarfile.TarInfo
             if is_of_interest_fun(member):
                 f: Optional[tarfile.ExFileObject] = tar.extractfile(member)  # type: ignore

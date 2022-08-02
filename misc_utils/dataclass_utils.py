@@ -79,7 +79,7 @@ def shallow_dataclass_from_dict(clazz, dct: dict):
         reraise=True,
         verbose=True,
         print_stacktrace=False,
-        fail_print_message_builder=lambda: f"fail class: {clazz.__name__=}",
+        fail_print_message_supplier=lambda: f"fail class: {clazz.__name__=}",
     )
     set_noninit_fields(clazz, dct, obj)
     return obj
@@ -357,7 +357,12 @@ class MyDecoder(json.JSONDecoder):
                 else:
                     fullpath = dct.pop(class_key)
                     # TODO: here some try except with lookup in TARGET_CLASS_MAPPING
-                    o = instantiate_via_importlib(dct, fullpath)
+                    o = just_try(
+                        lambda: instantiate_via_importlib(dct, fullpath),
+                        reraise=True,
+                        fail_print_message_supplier=lambda: f"could not instantiate: {fullpath}",
+                        verbose=True,
+                    )
                     # if eid is not None:
                     object_registry[eid] = o
 
@@ -394,7 +399,7 @@ def _json_loads_decode_dataclass(s: str):
         lambda: json.loads(s, cls=MyDecoder),
         reraise=True,
         verbose=True,
-        fail_print_message_builder=fail_fun,
+        fail_print_message_supplier=fail_fun,
     )
 
 

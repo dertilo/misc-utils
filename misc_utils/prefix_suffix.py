@@ -32,20 +32,22 @@ class PrefixSuffix(Buildable):
         """
         if self.prefix_key in BASE_PATHES:
             self._set_prefix()
-            repr=f"{self.prefix}/{self.suffix}"
+            repr = f"{self.prefix}/{self.suffix}"
         else:
             """
             inspect calls the __repro__ method before BASE_PATHES was initialized!!
-            
+
             File "python3.9/inspect.py", line 2593, in __str__
-            formatted = '{} = {}'.format(formatted, repr(self._default))                                                                                                                                                   
-            File "misc-utils/misc_utils/prefix_suffix.py", line 35, in __repr__                                                                         
-            self.__set_prefix()                       
+            formatted = '{} = {}'.format(formatted, repr(self._default))
+            File "misc-utils/misc_utils/prefix_suffix.py", line 35, in __repr__
+            self.__set_prefix()
             File "misc-utils/misc_utils/prefix_suffix.py", line 22, in __set_prefix
 
             """
-            just_some_dummy_that_should_never_be_used=f"{self.prefix_key}/{self.suffix}"
-            repr=just_some_dummy_that_should_never_be_used
+            just_some_dummy_that_should_never_be_used = (
+                f"{self.prefix_key}/{self.suffix}"
+            )
+            repr = just_some_dummy_that_should_never_be_used
         return repr
 
     def from_str_same_prefix(self, path: str):

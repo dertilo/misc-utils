@@ -6,7 +6,8 @@ from beartype import beartype
 from time import time
 import os
 from misc_utils.dataclass_utils import (
-    all_undefined_must_be_filled, )
+    all_undefined_must_be_filled,
+)
 
 DEBUG_MEMORY_LEAK = os.environ.get("DEBUG_MEMORY_LEAK", "False").lower() != "false"
 if DEBUG_MEMORY_LEAK:
@@ -47,7 +48,7 @@ class Buildable:
         """
         if not self._is_ready:
             all_undefined_must_be_filled(self)
-            self._build_all_chrildren()
+            self._build_all_children()
             start = time()
             o = self._build_self()
             if o is None:
@@ -65,7 +66,7 @@ class Buildable:
         assert o is not None  # TODO: should be done be beartype!
         return o
 
-    def _build_all_chrildren(self):
+    def _build_all_children(self):
         for f in fields(self):
             is_argument_of_dataclasses_init_method = f.init
             if is_argument_of_dataclasses_init_method:

@@ -68,6 +68,7 @@ class CachedData(Buildable, ABC):
     for long-lived data better simply use Buildable + is_ready for checking validity of data
     long-lived data: you don't want/need different versions, use_hash_suffix=False!
     """
+
     # str for backward compatibility
     cache_base: Union[
         _IGNORE_THIS_USE_CACHE_DIR, PrefixSuffix
@@ -269,7 +270,7 @@ class CachedData(Buildable, ABC):
             lambda: self._pre_build_load_state_fields(),
             reraise=True,
             verbose=True,
-            fail_print_message_builder=lambda: f"could not _load_state_fields for {type(self).__name__=}",
+            fail_print_message_supplier=lambda: f"could not _load_state_fields for {type(self).__name__=}",
         )
 
     @beartype

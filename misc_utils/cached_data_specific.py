@@ -99,6 +99,7 @@ class ContinuedCachedData(CachedData):
     """
     TODO: is this really needed? better just use Buildable instead!
     """
+
     clean_on_fail: bool = dataclasses.field(default=False, repr=False)
 
     @property

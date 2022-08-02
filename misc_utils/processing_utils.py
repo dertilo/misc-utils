@@ -94,7 +94,6 @@ def process_with_threadpool(
             yield future.result()
 
 
-
 @beartype
 def process_with_threadpool_backpressure(
     process_batch_fun: Callable[[list[Any]], Any],

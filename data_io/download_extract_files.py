@@ -24,7 +24,6 @@ def download_data(
     url = base_url + "/" + file_name
     file = data_dir + "/" + file_name
 
-
     try:
         if unzip_it:
             suffixes = [".zip", ".ZIP", ".tar.gz", ".tgz", ".gz", ".GZ", ".tar", ".TAR"]
@@ -35,7 +34,7 @@ def download_data(
             if not os.path.isdir(extract_folder):
                 wget_file(url, data_dir, verbose)
                 os.makedirs(extract_folder, exist_ok=True)
-                extract_file(file,extract_folder, get_build_extract_command_fun(file))
+                extract_file(file, extract_folder, get_build_extract_command_fun(file))
                 if remove_zipped:
                     os.remove(file)
             return extract_folder
@@ -47,7 +46,7 @@ def download_data(
             raise e
 
 
-def get_build_extract_command_fun(file:str):
+def get_build_extract_command_fun(file: str):
     if any(file.endswith(suf) for suf in [".zip", ".ZIP"]):
 
         def fun(dirr, file):
@@ -72,10 +71,12 @@ def get_build_extract_command_fun(file:str):
         raise NotImplementedError
     return fun
 
-def extract_file(file, extract_folder, build_extract_command_fun:Callable):
+
+def extract_file(file, extract_folder, build_extract_command_fun: Callable):
     cmd = build_extract_command_fun(extract_folder, file)
     _, stderr = exec_command(cmd)
     assert len(stderr) == 0, f"{cmd=}: {stderr=}"
+
 
 @beartype
 def wget_file(
@@ -89,7 +90,15 @@ def wget_file(
     passw = f" --password {password} " if password is not None else ""
     user = f' --user "{user}" ' if user is not None else ""
     quiet = " -q " if not verbose else ""
-    cmd = f"wget --trust-server-names -c -N{quiet}{passw}{user} -P {data_folder} {url}"
+    file_name = url.split("/")[-1]
+    file = f"{data_folder}/{file_name}"
+    if os.path.isfile(file):
+        cmd = f"wget --trust-server-names -c -N{quiet}{passw}{user} -P {data_folder} {url}"
+    else:
+        cmd = (
+            f"wget --trust-server-names -c {quiet}{passw}{user} -P {data_folder} {url}"
+        )
+
     print(f"{cmd=}")
     os.system(cmd)
     # TODO: why is subprocess not working?

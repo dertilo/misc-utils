@@ -36,15 +36,15 @@ def just_try(
     verbose: bool = False,
     print_stacktrace: bool = True,
     fail_return_message_builder: Optional[Callable[..., Any]] = None,
-    fail_print_message_builder: Optional[Callable[..., Any]] = None,
+    fail_print_message_supplier: Optional[Callable[..., Any]] = None,
 ) -> Union[T, T_default]:
     try:
         return supplier()
     except Exception as e:
-        if verbose:
+        if verbose or reraise:
             m = (
-                fail_print_message_builder()
-                if fail_print_message_builder is not None
+                fail_print_message_supplier()
+                if fail_print_message_supplier is not None
                 else ""
             )
             print(f"\ntried and failed with: {e}\n{m}\n")
