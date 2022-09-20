@@ -10,6 +10,7 @@ from misc_utils.utils import (
     flatten_nested_dict,
     nest_flattened_dict,
     collapse_sequence,
+    sorted_groupby,
 )
 
 
@@ -68,5 +69,18 @@ def test_collapse_sequence():
     assert json.dumps(collapsed) == json.dumps(expected)
 
 
-if __name__ == "__main__":
-    test_collapse_sequence()
+def test_group_dicts(
+    data=[
+        {"foo": "bar", "jon": 1},
+        {"foo": "bar", "jon": 2},
+        {"foo": "foobar", "jon": 3},
+    ],
+):
+    def get_groupby_val(d: dict) -> str:
+        return d["foo"]
+
+    key2group = sorted_groupby(data, get_groupby_val)
+    assert key2group == {
+        "bar": [{"foo": "bar", "jon": 1}, {"foo": "bar", "jon": 2}],
+        "foobar": [{"foo": "foobar", "jon": 3}],
+    }

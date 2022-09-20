@@ -17,22 +17,27 @@ try:
     NumpyArray = NDArray[number]
     NumpyFloat2DArray = Annotated[NDArray[floating], IsAttr["ndim", IsEqual[2]]]
     # brackets around multi-line conjunction, see:  https://github.com/beartype/beartype#validator-syntax
+    firstdim_nonempty = lambda x: x.shape[0] > 0
+    seconddim_nonempty = lambda x: x.shape[1] > 0
+
     NeNumpyFloat2DArray = Annotated[
         NDArray[floating],
-        (
-            IsAttr["ndim", IsEqual[2]]
-            & Is[lambda x: x.shape[0] > 0]
-            & Is[lambda x: x.shape[1] > 0]
-        ),
+        (IsAttr["ndim", IsEqual[2]] & Is[firstdim_nonempty] & Is[seconddim_nonempty]),
     ]
     # "Delimiting two or or more validators with commas at the top level ... is an alternate syntax for and-ing those validators with the & operator", see: https://github.com/beartype/beartype#validator-syntax
     NeNumpyFloat1DArray = Annotated[
-        NDArray[floating], IsAttr["ndim", IsEqual[1]], Is[lambda x: x.shape[0] > 0]
+        NDArray[floating], IsAttr["ndim", IsEqual[1]], Is[firstdim_nonempty]
     ]
     NumpyFloat1DArray = Annotated[NDArray[floating], IsAttr["ndim", IsEqual[1]]]
     # TODO: rename to NumpyFloatDim1, NumpyFloat32Dim1, etc
     NumpyFloat1D = NeNumpyFloat1DArray  # omitting the Ne-prefix cause 95% of situations I need non-empty array!
     NumpyFloat2D = NeNumpyFloat2DArray
+    NumpyInt16_1D = Annotated[
+        NDArray[int16], (IsAttr["ndim", IsEqual[1]] & Is[firstdim_nonempty])
+    ]
+    Numpy1D = Annotated[
+        NDArray[number], (IsAttr["ndim", IsEqual[1]] & Is[firstdim_nonempty])
+    ]
 
     Numpy1DArray = Annotated[NDArray[number], IsAttr["ndim", IsEqual[1]]]
     NumpyInt16Dim1 = Annotated[NDArray[int16], IsAttr["ndim", IsEqual[1]]]

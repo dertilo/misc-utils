@@ -59,7 +59,7 @@ export_black_list = [
     "AUDIO_FILE_CORPORA" "PROCESSED_DATA",
     # "EVAL_DATASETS_CACHE", Vocab is cached here!
 ]  # TODO: WTF!! this is a hack! specific to a use-case, things like ANNOTATION_DATA should not be here
-
+export_black_list_class_names=["ArpaBuilder"]
 
 @dataclass
 class CachedData(Buildable, ABC):
@@ -143,6 +143,7 @@ class CachedData(Buildable, ABC):
             new_cache_root is not None
             and not os.path.isdir(new_cache_dir)
             and not self.cache_base_is_blacklisted(export_black_list)
+            and not self.__class__.__name__ in export_black_list_class_names
         ):
             shutil.copytree(
                 str(self.cache_dir),

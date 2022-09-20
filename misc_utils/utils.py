@@ -394,3 +394,20 @@ def xmls_are_semantically_equal(actual: str, expected: str) -> tuple[bool, str]:
         etree.fromstring(actual), etree.fromstring(expected), lambda x: error.append(x)
     )
     return match, "\n".join(error)
+
+
+_Element = TypeVar("_Element")
+_GroupValue = TypeVar("_GroupValue")
+
+
+@beartype
+def sorted_groupby(
+    data: list[_Element], get_groupby_val: Callable[[_Element], _GroupValue]
+) -> dict[_GroupValue, list[_Element]]:
+    key2group = {
+        k: list(g)
+        for k, g in itertools.groupby(
+            sorted(data, key=get_groupby_val), key=get_groupby_val
+        )
+    }
+    return key2group

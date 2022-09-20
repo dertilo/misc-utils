@@ -109,24 +109,48 @@ def write_csv(
 
 @beartype
 def read_csv(
-    file_path, delimiter: str = "\t", encoding="utf-8", use_json_loads: bool = True
+    file_path,
+    delimiter: str = "\t",
+    encoding="utf-8",
+    use_json_loads: bool = True,
+    process_row: Callable[[list[Any]], list[Any]] = lambda x: x,
+    keys: Optional[list[str]] = None,
 ) -> Iterable[dict]:  # TODO: json.loads should recognize int/float
     lines = read_lines(file_path, encoding=encoding)
-    yield from read_csv_lines(lines, delimiter, use_json_loads=use_json_loads)
+    yield from read_csv_lines(
+        lines,
+        delimiter,
+        use_json_loads=use_json_loads,
+        process_row=process_row,
+        keys=keys,
+    )
 
 
 @beartype
 def read_csv_lines(
-    lines: Iterable[str], delimiter: str, use_json_loads: bool = True
+    lines: Iterable[str],
+    delimiter: str,
+    use_json_loads: bool = True,
+    process_row: Callable[[list[Any]], list[Any]] = lambda x: x,
+    keys: Optional[list[str]] = None,
 ) -> Iterable[dict]:
+    if use_json_loads:
+
+        def process_fun(row):
+            s = f'[{",".join(row)}]'
+            return json.loads(s)
+
+        process_row = process_fun
+
     it = iter(lines)
     header = [h for h in next(it).replace("\r", "").split(delimiter) if len(h) > 0]
+    if keys is not None:
+        assert len(header) == len(keys)
+        header = keys
     for l in it:
         l = l.replace("\r", "")
         row = l.split(delimiter)
-        if use_json_loads:
-            s = f'[{",".join(row)}]'
-            row = json.loads(s)
+        row = process_row(row)
         assert len(row) == len(header), f"{header=}, {row=}"
         yield {col: row[k] for k, col in enumerate(header)}
 
