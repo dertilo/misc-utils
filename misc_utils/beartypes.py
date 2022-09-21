@@ -140,4 +140,8 @@ class BearBully:
     ne_string: NeStr
 
 
+from beartype.typing import TYPE_CHECKING
+
+assert not TYPE_CHECKING, f"TYPE_CHECKING disables beartype"
+assert __debug__, f"running python in optimized mode (-O) disables beartype"
 assert bear_does_roar(lambda: BearBully(""))
