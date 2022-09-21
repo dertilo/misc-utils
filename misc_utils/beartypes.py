@@ -11,7 +11,7 @@ from beartype.vale import IsAttr, IsEqual, Is
 
 try:
     # TODO: looks somewhat ugly!
-    from numpy import floating, int16, number, int32
+    from numpy import floating, int16, number, int32, float32
     from numpy.typing import NDArray
 
     NumpyArray = NDArray[number]
@@ -31,6 +31,10 @@ try:
     NumpyFloat1DArray = Annotated[NDArray[floating], IsAttr["ndim", IsEqual[1]]]
     # TODO: rename to NumpyFloatDim1, NumpyFloat32Dim1, etc
     NumpyFloat1D = NeNumpyFloat1DArray  # omitting the Ne-prefix cause 95% of situations I need non-empty array!
+    NumpyFloat32_1D = Annotated[
+        NDArray[float32], IsAttr["ndim", IsEqual[1]], Is[firstdim_nonempty]
+    ]
+
     NumpyFloat2D = NeNumpyFloat2DArray
     NumpyInt16_1D = Annotated[
         NDArray[int16], (IsAttr["ndim", IsEqual[1]] & Is[firstdim_nonempty])
