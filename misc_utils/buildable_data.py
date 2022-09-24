@@ -1,7 +1,10 @@
+import os
 from abc import abstractmethod
-from dataclasses import dataclass, field
-from typing import Any
+from dataclasses import dataclass, field, asdict
+from typing import Any, Iterable, Iterator
 
+from data_io.readwrite_files import read_jsonl, write_jsonl
+from misc_utils.beartypes import Dataclass, GenericDataclass
 from misc_utils.buildable import Buildable
 from misc_utils.dataclass_utils import UNDEFINED
 from misc_utils.prefix_suffix import PrefixSuffix, BASE_PATHES
@@ -21,7 +24,7 @@ class BuildableData(Buildable):
 
     @property
     @abstractmethod
-    def name(self):
+    def name(self) -> str:
         raise NotImplementedError
 
     @property
@@ -46,7 +49,8 @@ class BuildableData(Buildable):
         raise NotImplementedError
 
     def _build_self(self) -> Any:
-        return self._build_data()
+        o = self._build_data()
+        return self if o is None else o
 
     @abstractmethod
     def _build_data(self) -> Any:
@@ -54,3 +58,36 @@ class BuildableData(Buildable):
         build/write data
         """
         raise NotImplementedError
+
+
+@dataclass
+class BuildableDataClasses(BuildableData, Iterable[GenericDataclass]):
+    @property
+    def jsonl_file(self) -> str:
+        return f"{self.data_dir}/data.jsonl"
+
+    @property
+    def _is_data_valid(self) -> bool:
+        return os.path.isfile(self.jsonl_file)
+
+    @abstractmethod
+    def _generate_dataclasses(self) -> Iterator[GenericDataclass]:
+        raise NotImplementedError
+
+    def _build_data(self) -> Any:
+        os.makedirs(self.data_dir)
+        write_jsonl(
+            self.jsonl_file,
+            (
+                dc.to_dict() if hasattr(dc, "to_dict") else asdict(dc)
+                for dc in self._generate_dataclasses()
+            ),
+        )
+
+    def __iter__(self) -> Iterator[GenericDataclass]:
+        # TODO: looks like black-magic!! is it allowed?
+        clazz = self.__orig_bases__[0].__args__[0]
+        create_fun = (
+            clazz.from_dict if hasattr(clazz, "from_dict") else lambda x: clazz(**x)
+        )
+        yield from (create_fun(d) for d in read_jsonl(self.jsonl_file))

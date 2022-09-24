@@ -1,5 +1,5 @@
 import dataclasses
-from typing import Annotated, TypeVar, Callable
+from typing import Annotated, TypeVar, Callable, Any, Type
 
 import beartype
 from beartype.roar import BeartypeCallException
@@ -50,12 +50,14 @@ try:
 except ImportError:
     print("no numpy installed!")
 
+T = TypeVar("T")
+
 NeStr = Annotated[str, Is[lambda s: len(s) > 0]]
-Dataclass = Annotated[object, Is[lambda o: dataclasses.is_dataclass(o)]]
+Dataclass = Annotated[Type, Is[lambda o: dataclasses.is_dataclass(o)]]
+GenericDataclass = Annotated[T, Is[lambda o: dataclasses.is_dataclass(o)]]
 # TODO: Annotated[object,...] is NOT working!
 # StrOrBytesInstance = Annotated[object, IsInstance[str]]
 
-T = TypeVar("T")
 T2 = TypeVar("T2")
 
 NeList = Annotated[list[T], Is[lambda lst: len(lst) > 0]]
@@ -97,28 +99,6 @@ try:
 except Exception as e:
     print(f"no torch!")
 
-try:
-    # see: https://github.com/beartype/beartype/issues/79
-    from beartype import is_bearable
-except ImportError:
-
-    def is_bearable(obj, annotation):
-        import beartype.roar
-        import beartype
-
-        @beartype.beartype
-        def check(o) -> annotation:
-            return o
-
-        try:
-            check(obj)
-            reason = None
-        except beartype.roar.BeartypeCallHintPepReturnException as e:
-            reason = e.args[0].split("return ")[-1]
-        if reason:
-            raise Exception(reason)
-        return True
-
 
 def bearify(obj, annotation):
     import beartype
@@ -148,4 +128,5 @@ from beartype.typing import TYPE_CHECKING
 
 assert not TYPE_CHECKING, f"TYPE_CHECKING disables beartype"
 assert __debug__, f"running python in optimized mode (-O) disables beartype"
+# TODO: strange it ignores/overwrites? my -O !!
 assert bear_does_roar(lambda: BearBully(""))
