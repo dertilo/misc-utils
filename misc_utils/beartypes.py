@@ -54,6 +54,7 @@ T = TypeVar("T")
 
 NeStr = Annotated[str, Is[lambda s: len(s) > 0]]
 Dataclass = Annotated[Type, Is[lambda o: dataclasses.is_dataclass(o)]]
+# TODO: GenericDataclass: cannot really use this cause it fugsup pycharms type-inference
 GenericDataclass = Annotated[T, Is[lambda o: dataclasses.is_dataclass(o)]]
 # TODO: Annotated[object,...] is NOT working!
 # StrOrBytesInstance = Annotated[object, IsInstance[str]]
@@ -82,14 +83,19 @@ try:
 
     # https://github.com/beartype/beartype/issues/98
     # PEP-compliant type hint matching only a floating-point PyTorch tensor.
-    TorchTensorFloat = Annotated[tensor, Is[lambda tens: tens.type() is torch_float]]
-
-    TorchTensorFloat2D = Annotated[
-        tensor, IsAttr["ndim", IsEqual[2]] & Is[lambda tens: tens.type() is torch_float]
+    TorchTensorFloat = Annotated[
+        torch.Tensor, Is[lambda tens: torch.is_floating_point(tens)]
     ]
 
-    # PEP-compliant type hint matching only an integral PyTorch tensor.
-    TorchTensorInt = Annotated[tensor, Is[lambda tens: tens.type() is torch_int]]
+    TorchTensorFloat2D = Annotated[
+        torch.Tensor,
+        IsAttr["ndim", IsEqual[2]] & Is[lambda tens: torch.is_floating_point(tens)],
+    ]
+
+    # see: https://stackoverflow.com/questions/72253473/how-to-judge-a-torch-tensor-dtype-is-int-or-not -> TODO: sure?
+    TorchTensorInt = Annotated[
+        torch.Tensor, Is[lambda tens: not torch.is_floating_point(tens)]
+    ]
 
     # where is this from ?
     TorchTensorFirstDimAsTwo = Annotated[
