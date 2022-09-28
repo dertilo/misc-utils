@@ -421,7 +421,7 @@ def deserialize_dataclass(o: NeStr) -> Dataclass:
 
 
 def serialize_dataclass(
-    d: Any,
+    d: Union[str, Dataclass],  # TODO: WTF why str?
     class_reference_key="_target_",
     skip_undefined=True,
     skip_keys: Optional[list[str]] = None,
@@ -443,7 +443,7 @@ def serialize_dataclass(
 
 @beartype
 def encode_dataclass(
-    d: Dataclass,
+    d: Union[str, Dataclass],  # TODO: WTF why str?
     class_reference_key="_target_",
     skip_undefined: bool = True,
     skip_keys: Optional[list[str]] = None,

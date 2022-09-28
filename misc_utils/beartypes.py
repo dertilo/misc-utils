@@ -53,7 +53,7 @@ except ImportError:
 T = TypeVar("T")
 
 NeStr = Annotated[str, Is[lambda s: len(s) > 0]]
-Dataclass = Annotated[Type, Is[lambda o: dataclasses.is_dataclass(o)]]
+Dataclass = Annotated[T, Is[lambda o: dataclasses.is_dataclass(o)]]
 # TODO: GenericDataclass: cannot really use this cause it fugsup pycharms type-inference
 GenericDataclass = Annotated[T, Is[lambda o: dataclasses.is_dataclass(o)]]
 # TODO: Annotated[object,...] is NOT working!

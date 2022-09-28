@@ -1,10 +1,10 @@
 import os
 from abc import abstractmethod
 from dataclasses import dataclass, field, asdict
-from typing import Any, Iterable, Iterator
+from typing import Any, Iterable, Iterator, TypeVar
 
 from data_io.readwrite_files import read_jsonl, write_jsonl
-from misc_utils.beartypes import Dataclass, GenericDataclass
+from misc_utils.beartypes import Dataclass
 from misc_utils.buildable import Buildable
 from misc_utils.dataclass_utils import UNDEFINED
 from misc_utils.prefix_suffix import PrefixSuffix, BASE_PATHES
@@ -59,23 +59,24 @@ class BuildableData(Buildable):
         """
         raise NotImplementedError
 
+SomeDataclass = TypeVar("SomeDataclass") # cannot use beartype here cause pycharm wont get it
 
 @dataclass
-class BuildableDataClasses(BuildableData, Iterable[GenericDataclass]):
+class BuildableDataClasses(BuildableData, Iterable[SomeDataclass]):
     @property
     def jsonl_file(self) -> str:
-        return f"{self.data_dir}/data.jsonl"
+        return f"{self.data_dir}/data.jsonl.gz"
 
     @property
     def _is_data_valid(self) -> bool:
         return os.path.isfile(self.jsonl_file)
 
     @abstractmethod
-    def _generate_dataclasses(self) -> Iterator[GenericDataclass]:
+    def _generate_dataclasses(self) -> Iterator[SomeDataclass]:
         raise NotImplementedError
 
     def _build_data(self) -> Any:
-        os.makedirs(self.data_dir)
+        os.makedirs(self.data_dir,exist_ok=True)
         write_jsonl(
             self.jsonl_file,
             (
@@ -84,7 +85,7 @@ class BuildableDataClasses(BuildableData, Iterable[GenericDataclass]):
             ),
         )
 
-    def __iter__(self) -> Iterator[GenericDataclass]:
+    def __iter__(self) -> Iterator[SomeDataclass]:
         # TODO: looks like black-magic!! is it allowed?
         clazz = self.__orig_bases__[0].__args__[0]
         create_fun = (
