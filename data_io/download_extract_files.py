@@ -93,11 +93,9 @@ def wget_file(
     file_name = url.split("/")[-1]
     file = f"{data_folder}/{file_name}"
     if os.path.isfile(file):
-        cmd = f"wget --trust-server-names -c -N{quiet}{passw}{user} -P {data_folder} {url}"
+        cmd = f"wget -O {file} -c -N{quiet}{passw}{user} -P {data_folder} {url}"
     else:
-        cmd = (
-            f"wget --trust-server-names -c {quiet}{passw}{user} -P {data_folder} {url}"
-        )
+        cmd = f"wget -O {file} -c {quiet}{passw}{user} -P {data_folder} {url}"
 
     print(f"{cmd=}")
     os.system(cmd)
