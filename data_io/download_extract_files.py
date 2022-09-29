@@ -92,6 +92,7 @@ def wget_file(
     quiet = " -q " if not verbose else ""
     file_name = url.split("/")[-1]
     file = f"{data_folder}/{file_name}"
+    os.makedirs(data_folder, exist_ok=True)
     if os.path.isfile(file):
         cmd = f"wget -O {file} -c -N{quiet}{passw}{user} -P {data_folder} {url}"
     else:
