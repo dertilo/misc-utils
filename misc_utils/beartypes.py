@@ -1,10 +1,13 @@
 import dataclasses
+import os.path
 from typing import Annotated, TypeVar, Callable, Any, Type
 
 import beartype
 from beartype.roar import BeartypeCallException
 from beartype.vale import IsAttr, IsEqual, Is
 
+File = Annotated[str, Is[lambda f: os.path.isfile(f)]]
+Directory = Annotated[str, Is[lambda f: os.path.isdir(f)]]
 # -------------------------------------------------------------------------------------
 # ----              NUMPY TYPES
 # -------------------------------------------------------------------------------------

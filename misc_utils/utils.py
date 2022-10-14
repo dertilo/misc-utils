@@ -402,7 +402,7 @@ _GroupValue = TypeVar("_GroupValue")
 
 @beartype
 def sorted_groupby(
-    data: list[_Element], get_groupby_val: Callable[[_Element], _GroupValue]
+    data: Iterable[_Element], get_groupby_val: Callable[[_Element], _GroupValue]
 ) -> dict[_GroupValue, list[_Element]]:
     key2group = {
         k: list(g)
