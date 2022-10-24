@@ -107,13 +107,13 @@ def buffer_shuffle(
         yield buf.pop()
 
 
-def get_dict_paths(paths, root_path, my_dict):
-    if not isinstance(my_dict, dict):
-        paths.append(root_path)
-        return root_path
-    for k, v in my_dict.items():
-        path = root_path + [k]
-        get_dict_paths(paths, path, v)
+def get_dict_paths(d: dict) -> Iterator[list[str]]:
+    for k, sd in d.items():
+        if isinstance(sd, dict):
+            for sub_k in get_dict_paths(sd):
+                yield [k] + sub_k
+        else:
+            yield [k]
 
 
 class Singleton(type):
@@ -412,7 +412,9 @@ def sorted_groupby(
     }
     return key2group
 
+
 import re
+
 
 def get_valid_filename(name):
     """
