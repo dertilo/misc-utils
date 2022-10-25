@@ -276,29 +276,30 @@ def retry(
 
 
 @beartype
+def format_table_cell(
+    v: Union[float, Any],
+) -> str:
+    if isinstance(v, float):
+        v = f"{v:.3f}"
+    if isinstance(v, _NOT_EXISTING):
+        v = None
+    return f"{v}"
+
+
+@beartype
 def build_markdown_table(
-    rows: list[list[float]],
+    rows: list[list[Union[float, Any]]],
     row_name: str,
     col_name: str,
     row_names: list[str],
     col_names: list[str],
+    format_fun: Callable[[Any], str] = format_table_cell,
 ) -> str:
-    def rounded_percentage(v: float) -> str:
-        return f"{100 * v:.1f}%"
-
-    rows_s = [[rounded_percentage(v) for v in r] for r in rows]
+    rows_s = [[format_fun(v) for v in r] for r in rows]
     header = " | ".join([f"{row_name} \ {col_name}"] + col_names)
     line = " | ".join(["---" for _ in range(len(col_names) + 1)])
     rows = [" | ".join([name] + cols) for name, cols in zip(row_names, rows_s)]
     return "\n".join([header, line] + rows)
-
-
-def format_table_cell(
-    v,
-):
-    if isinstance(v, float):
-        v = f"{v:.3f}"
-    return f"{v}"
 
 
 @beartype
@@ -312,7 +313,7 @@ def build_markdown_table_from_dicts(
         col_names = list(dicts[0].keys())
 
     row_title = col_names[0]
-    rows_s = [[format_fun(d[c]) for c in col_names] for d in dicts]
+    rows_s = [[format_fun(d.get(c, None)) for c in col_names] for d in dicts]
     col_title = f" \ {col_title}" if col_title is not None else ""
     header = " | ".join([f"{row_title}{col_title}"] + col_names[1:])
     line = " | ".join(["---" for _ in range(len(col_names))])
