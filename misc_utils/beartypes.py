@@ -3,6 +3,7 @@ import os.path
 from typing import Annotated, TypeVar, Callable, Any, Type
 
 import beartype
+from beartype.door import die_if_unbearable
 from beartype.roar import BeartypeCallException
 from beartype.vale import IsAttr, IsEqual, Is
 
@@ -110,13 +111,8 @@ except Exception as e:
 
 
 def bearify(obj, annotation):
-    import beartype
-
-    @beartype.beartype
-    def check(o) -> annotation:
-        return o
-
-    return check(obj)
+    die_if_unbearable(obj,annotation)
+    return obj
 
 
 def bear_does_roar(roar_trigger_fun: Callable):
