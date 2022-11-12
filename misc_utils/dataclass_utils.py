@@ -203,6 +203,7 @@ class MyCustomEncoder(json.JSONEncoder):
 
     def default(self, o):
         if self.sparse:
+            raise NotImplementedError("if you want it, fix it!")
             self._object2node_id = dict()
             self._id2node_ = dict()
         dct = self._asdict(o, dict_factory=self.sparse_dict if self.sparse else dict)

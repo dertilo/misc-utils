@@ -82,13 +82,15 @@ class CachedDataclasses(CachedDicts, Iterable[T]):
         raise NotImplementedError
 
     def _generate_dicts_to_cache(self) -> Iterator[dict]:
+        counter = [0]
         yield from (
             encode_dataclass(o)
-            for o in tqdm(
-                self.generate_dataclasses_to_cache(),
+            for counter[0], o in tqdm(
+                enumerate(self.generate_dataclasses_to_cache()),
                 desc=f"buidling cache for {self.name}",
             )
         )
+        assert counter[0] > 0, f"{self.name} did not write anything!"
 
     def __iter__(self) -> Iterator[T]:
         yield from (deserialize_dataclass(s) for s in read_lines(self.jsonl_file))

@@ -1,13 +1,24 @@
 import os
 from abc import abstractmethod
 from dataclasses import dataclass, field, asdict
-from typing import Any, Iterable, Iterator, TypeVar
+from pathlib import Path
+from typing import Any, Iterable, Iterator, TypeVar, Annotated
+
+from beartype.vale import Is
+from slugify import slugify
 
 from data_io.readwrite_files import read_jsonl, write_jsonl
-from misc_utils.beartypes import Dataclass
+from misc_utils.beartypes import Dataclass, NeStr
 from misc_utils.buildable import Buildable
 from misc_utils.dataclass_utils import UNDEFINED
 from misc_utils.prefix_suffix import PrefixSuffix, BASE_PATHES
+
+
+def is_sluggy(s: NeStr) -> bool:
+    return slugify(s) == s
+
+
+SlugStr = Annotated[NeStr, Is[is_sluggy]]
 
 
 @dataclass
@@ -20,11 +31,13 @@ class BuildableData(Buildable):
 
     @property
     def data_dir(self) -> str:
-        return f"{self.base_dir}/{self.name}"
+        data_dir = f"{self.base_dir}/{self.name}"
+        Path(data_dir).mkdir(parents=True, exist_ok=True)
+        return data_dir
 
     @property
     @abstractmethod
-    def name(self) -> str:
+    def name(self) -> SlugStr:
         raise NotImplementedError
 
     @property
@@ -50,6 +63,7 @@ class BuildableData(Buildable):
 
     def _build_self(self) -> Any:
         o = self._build_data()
+        # TODO: assert self._is_data_valid here??
         return self if o is None else o
 
     @abstractmethod
@@ -59,7 +73,11 @@ class BuildableData(Buildable):
         """
         raise NotImplementedError
 
-SomeDataclass = TypeVar("SomeDataclass") # cannot use beartype here cause pycharm wont get it
+
+SomeDataclass = TypeVar(
+    "SomeDataclass"
+)  # cannot use beartype here cause pycharm wont get it
+
 
 @dataclass
 class BuildableDataClasses(BuildableData, Iterable[SomeDataclass]):
@@ -76,7 +94,7 @@ class BuildableDataClasses(BuildableData, Iterable[SomeDataclass]):
         raise NotImplementedError
 
     def _build_data(self) -> Any:
-        os.makedirs(self.data_dir,exist_ok=True)
+        os.makedirs(self.data_dir, exist_ok=True)
         write_jsonl(
             self.jsonl_file,
             (

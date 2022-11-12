@@ -186,7 +186,7 @@ class TimedIterable(Generic[T]):
             f"{pandas.DataFrame(self.durations).describe(percentiles=[0.5]).to_dict()}"
         )
 
-
+@beartype
 def sanitize_hexappend_filename(filename: str) -> str:
     """
     see: https://stackoverflow.com/questions/7406102/create-sane-safe-filename-from-any-unsafe-string
