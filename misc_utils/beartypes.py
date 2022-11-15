@@ -111,7 +111,7 @@ except Exception as e:
 
 
 def bearify(obj, annotation):
-    die_if_unbearable(obj,annotation)
+    die_if_unbearable(obj, annotation)
     return obj
 
 

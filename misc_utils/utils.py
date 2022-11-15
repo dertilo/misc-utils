@@ -186,6 +186,7 @@ class TimedIterable(Generic[T]):
             f"{pandas.DataFrame(self.durations).describe(percentiles=[0.5]).to_dict()}"
         )
 
+
 @beartype
 def sanitize_hexappend_filename(filename: str) -> str:
     """

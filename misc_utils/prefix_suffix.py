@@ -42,10 +42,10 @@ class PrefixSuffix(Buildable):
             File "misc-utils/misc_utils/prefix_suffix.py", line 35, in __repr__
             self.__set_prefix()
             File "misc-utils/misc_utils/prefix_suffix.py", line 22, in __set_prefix
-            
+
             """
-            this_is_only_used_for_hashing=f"{self.prefix_key}/{self.suffix}"
-            repr=this_is_only_used_for_hashing
+            this_is_only_used_for_hashing = f"{self.prefix_key}/{self.suffix}"
+            repr = this_is_only_used_for_hashing
         return repr
 
     def from_str_same_prefix(self, path: str):

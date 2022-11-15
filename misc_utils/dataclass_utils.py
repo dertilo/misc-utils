@@ -223,6 +223,9 @@ class MyCustomEncoder(json.JSONEncoder):
             r.append((k, v))
 
     def _asdict_inner(self, obj, dict_factory):
+        """
+        _UNDEFINED is a Dataclass! so it gets serialized as such!
+        """
         if dataclasses.is_dataclass(obj):
             result: list[tuple[str, Any]] = []
             module = obj.__class__.__module__
@@ -252,8 +255,9 @@ class MyCustomEncoder(json.JSONEncoder):
             )
             # WTF: if a field has value of dataclasses.MISSING than hasattr(obj,f.name) is True!
             for f in feelds:
-                value = self._asdict_inner(getattr(obj, f.name), dict_factory)
+                value = getattr(obj, f.name)  # can be UNDEFINED
                 if value is not UNDEFINED or not self.skip_undefined:
+                    value = self._asdict_inner(value, dict_factory)
                     self.maybe_append(result, f.name, value)
 
             # Add values of non-special attributes which are properties.
@@ -475,11 +479,15 @@ def deserialize_from_yaml(
 
 @dataclass
 class _UNDEFINED(metaclass=Singleton):
+    """
+    I guess this is a dataclass to enable serialization?
+    """
+
     pass
 
 
 UNDEFINED = _UNDEFINED()
-FILLME = Union[T, _UNDEFINED]  # TODO: destroy IDE argument hint
+FILLME = Union[T, _UNDEFINED]  # TODO: destroys IDE argument hint
 
 # @dataclass
 # class FILLME(Union[T,_UNDEFINED]): # TODO: ???
