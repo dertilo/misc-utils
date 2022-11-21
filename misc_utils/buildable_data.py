@@ -15,10 +15,22 @@ from misc_utils.prefix_suffix import PrefixSuffix, BASE_PATHES
 
 
 def is_sluggy(s: NeStr) -> bool:
-    return slugify(s) == s
+    regex_pattern_to_allow_underscores = r"[^-a-z0-9_]+"
+    return slugify(s, regex_pattern=regex_pattern_to_allow_underscores) == s
 
 
 SlugStr = Annotated[NeStr, Is[is_sluggy]]
+
+
+def is_cased_sluggy(s: NeStr) -> bool:
+    regex_pattern_to_allow_underscores = r"[^-A-Za-z0-9_]+"
+    return (
+        slugify(s, regex_pattern=regex_pattern_to_allow_underscores, lowercase=False)
+        == s
+    )
+
+
+CasedSlugStr = Annotated[NeStr, Is[is_cased_sluggy]]
 
 
 @dataclass
