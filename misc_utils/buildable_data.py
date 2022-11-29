@@ -41,11 +41,20 @@ class BuildableData(Buildable):
 
     base_dir: PrefixSuffix = field(default_factory=lambda: BASE_PATHES["raw_data"])
 
+    # TODO: can I do it like this? probably not cause here the BASE_PATHES["raw_data"] get evaluated/executed earlier!
+    # base_dir: ClassVar[PrefixSuffix] =  BASE_PATHES["raw_data"]
+
     @property
     def data_dir(self) -> str:
         data_dir = f"{self.base_dir}/{self.name}"
         Path(data_dir).mkdir(parents=True, exist_ok=True)
         return data_dir
+
+    @property
+    def data_dir_prefix_suffix(self) -> PrefixSuffix:
+        return PrefixSuffix(
+            self.base_dir.prefix_key, f"{self.base_dir.suffix}/{self.name}"
+        ).build()
 
     @property
     @abstractmethod
