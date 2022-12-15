@@ -117,7 +117,8 @@ def instantiate_via_importlib(
 
 
 IDKEY = "_id_"
-SPECIAL_KEYS = [IDKEY, "_target_", "_cls_"]
+CLASS_REF_KEY = "_target_"
+SPECIAL_KEYS = [IDKEY, CLASS_REF_KEY, "_cls_"]
 CLASS_REF_NO_INSTANTIATE = "_python_dataclass_"  # use this to prevent instantiate_via_importlib, if one wants class-reference for documentation purposes only
 UNSERIALIZABLE = "<UNSERIALIZABLE>"
 
@@ -176,7 +177,7 @@ class MyCustomEncoder(json.JSONEncoder):
     # see: https://stackoverflow.com/questions/64777931/what-is-the-recommended-way-to-include-properties-in-dataclasses-in-asdict-or-se
     """
 
-    class_reference_key = "_target_"
+    class_reference_key = CLASS_REF_KEY
     skip_undefined = True
     encode_for_hash = False
     sparse: bool = False
@@ -318,7 +319,7 @@ class MyDecoder(json.JSONDecoder):
         object_registry: dict[str, Any] = {}
 
         def object_hook(dct: Dict):
-            for k in ["_target_", "_cls_"]:
+            for k in [CLASS_REF_KEY, "_cls_"]:
                 if k in dct:
                     class_key = k
                     break
@@ -347,7 +348,7 @@ class MyDecoder(json.JSONDecoder):
                         dct, skip_keys=[IDKEY] + just_for_backward_compatibility
                     )
                     if (
-                        dct["_target_"] != "misc_utils.prefix_suffix.PrefixSuffix"
+                        dct[CLASS_REF_KEY] != "misc_utils.prefix_suffix.PrefixSuffix"
                     ):  # no isinstance due to circular dependency
                         # PrefixSuffix does change prefix depending on BASE_PATHES
                         if dct_from_obj_registry != dct_with_same_id:
@@ -427,7 +428,7 @@ def deserialize_dataclass(o: NeStr) -> Dataclass:
 
 def serialize_dataclass(
     d: Union[str, Dataclass],  # TODO: WTF why str?
-    class_reference_key="_target_",
+    class_reference_key=CLASS_REF_KEY,
     skip_undefined=True,
     skip_keys: Optional[list[str]] = None,
     encode_for_hash: bool = False,
@@ -449,7 +450,7 @@ def serialize_dataclass(
 @beartype
 def encode_dataclass(
     d: Union[str, Dataclass],  # TODO: WTF why str?
-    class_reference_key="_target_",
+    class_reference_key=CLASS_REF_KEY,
     skip_undefined: bool = True,
     skip_keys: Optional[list[str]] = None,
     sparse: bool = False,
