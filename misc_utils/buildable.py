@@ -134,7 +134,7 @@ class BuildableContainer(Generic[T], Buildable):
 
         for obj in g:
             if hasattr(obj, "build"):
-                obj.build()
+                obj.build() # TODO: no shapeshifting here!!
 
     def _tear_down_all_chrildren(self):
         if isinstance(self.data, (list, tuple)):

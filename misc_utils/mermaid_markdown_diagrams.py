@@ -143,6 +143,11 @@ def mermaid_flowchart(
         skip_keys += additional_skipkeys
 
     d = encode_dataclass(o, skip_keys=skip_keys)
+    flow_chart = dict_to_mermaid(d)
+    return flow_chart
+
+
+def dict_to_mermaid(d):
     edges = "\n".join(
         [
             f"{node_from} --> | {param_name} | {node_to}"

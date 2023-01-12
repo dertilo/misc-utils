@@ -24,7 +24,8 @@ class PrefixSuffix(Buildable):
         """
         more lazy than post_init, "builds" prefix, only needed in case one newer calls str()
         """
-        return self._set_prefix()
+        self._set_prefix()
+        return self
 
     def __repr__(self) -> str:
         """

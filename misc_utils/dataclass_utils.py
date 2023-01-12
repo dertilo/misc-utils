@@ -142,6 +142,24 @@ def hash_dataclass(
     return hashed_self
 
 
+def hash_dataclass_dict(
+    dc: dict,
+    skip_keys=[
+        IDKEY,
+        "cache_base",
+        "cache_dir",
+        "use_hash_suffix",
+        "overwrite_cache",
+    ],
+) -> str:
+    """
+    under, dunder and __exclude_from_hash__ fields are not hashed!
+    """
+    s = serialize_dataclass(dc, skip_keys=skip_keys, encode_for_hash=True)
+    hashed_self = sha1(s.encode("utf-8")).hexdigest()
+    return hashed_self
+
+
 def is_dunder(s):
     return s.startswith("__") and s.endswith("__")
 
@@ -391,7 +409,7 @@ def to_dict(o) -> Dict:
     # return dataclasses.asdict(
     #     o, dict_factory=lambda x: {k: v for k, v in x if serialize_field(k, v)}
     # )
-    return encode_dataclass(o, skip_keys=SPECIAL_KEYS)
+    return encode_dataclass(o, skip_keys=SPECIAL_KEYS)  # TODO: +["_was_built"]
 
 
 @beartype
