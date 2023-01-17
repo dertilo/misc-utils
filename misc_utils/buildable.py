@@ -134,7 +134,7 @@ class BuildableContainer(Generic[T], Buildable):
 
         for obj in g:
             if hasattr(obj, "build"):
-                obj.build() # TODO: no shapeshifting here!!
+                obj.build()  # TODO: no shapeshifting here!!
 
     def _tear_down_all_chrildren(self):
         if isinstance(self.data, (list, tuple)):
@@ -143,6 +143,41 @@ class BuildableContainer(Generic[T], Buildable):
             self.data = {k: v._tear_down() for k, v in self.data.items()}
         else:
             raise NotImplementedError
+
+
+K = TypeVar("K")
+V = TypeVar("V")
+
+
+@dataclass
+class BuildableDict(Generic[K, V], Buildable):
+    data: dict[K, V]
+
+    def _build_self(self):
+        for k, v in self.data.items():
+            if hasattr(v, "build"):
+                self.data[k] = v.build()
+
+    def __getitem__(self, key):
+        return self.data[key]
+
+    def __setitem__(self, key, value):
+        self.data[key] = value
+
+    def __delitem__(self, key):
+        del self.data[key]
+
+    def __iter__(self):
+        return iter(self.data)
+
+    def __len__(self):
+        return len(self.data)
+
+    def values(self):
+        yield from self.data.values()
+
+    def items(self):
+        yield from self.data.items()
 
 
 if DEBUG_MEMORY_LEAK:
@@ -181,15 +216,3 @@ class BuildableList(Buildable, list[T]):
 
     def _tear_down_all_chrildren(self):
         self.data = [x._tear_down() for x in self.data]
-
-
-# @dataclass
-# class BuildableWrapper(Generic[T], Buildable):
-#     """
-#     might be used to wrap immutables like int
-#     """
-#
-#     data: T
-#
-#     def build(self) -> T:
-#         return self.data
