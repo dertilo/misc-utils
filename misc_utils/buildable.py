@@ -1,10 +1,11 @@
 import dataclasses
+import os
 from dataclasses import dataclass, fields
+from time import time
 from typing import Any, Generic, TypeVar, final
 
 from beartype import beartype
-from time import time
-import os
+
 from misc_utils.dataclass_utils import (
     all_undefined_must_be_filled,
 )
@@ -59,6 +60,7 @@ class Buildable:
                 print(
                     f"build_self of {self.__class__.__name__} took:{duration} seconds"
                 )
+                # traceback.print_stack()
         else:
             # print(f"not building {self.__class__.__name__}, is ready!")
             self._was_built = True  # being ready is as good as being built
