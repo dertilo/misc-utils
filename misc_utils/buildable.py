@@ -10,6 +10,7 @@ from misc_utils.dataclass_utils import (
     all_undefined_must_be_filled,
 )
 
+DEBUG = os.environ.get("DEBUG", "False").lower() != "false"
 DEBUG_MEMORY_LEAK = os.environ.get("DEBUG_MEMORY_LEAK", "False").lower() != "false"
 if DEBUG_MEMORY_LEAK:
     print(f"DEBUGGING MODE in {__name__}")
@@ -17,15 +18,20 @@ if DEBUG_MEMORY_LEAK:
 
 @dataclass
 class Buildable:
-    # TODO:?
-    # def __enter__(self):
-    #     self.build()
-    #
-    # def __exit__(self, exc_type, exc_val, exc_tb):
-    #     pass
-    #
+    """
+    base-class for "buildable Dataclasses"
+
+    key-idea: a Dataclass has fields (attributes) those can be interpreted as "dependencies"
+        in order to "build" a Dataclass it is necessary to first build all ites dependencies (=children)
+
+    the build-method essentially does 2 things:
+        1. _build_all_children
+        2. _build_self
+
+    if the buildable-object "_is_ready" then it does NOT build any children and also not itself!
+    """
+
     _was_built: bool = dataclasses.field(default=False, init=False, repr=False)
-    _was_teared_down: bool = dataclasses.field(default=False, init=False, repr=False)
 
     @property
     def _is_ready(self) -> bool:
@@ -33,13 +39,6 @@ class Buildable:
         if true prevents going deeper into dependency-tree/graph
         """
         return self._was_built
-
-    @property
-    def _is_down(self) -> bool:
-        """
-        if true prevents going deeper into dependency-tree/graph
-        """
-        return self._was_teared_down
 
     @beartype
     @final  # does not enforce it but at least the IDE warns you!
@@ -56,7 +55,7 @@ class Buildable:
                 o = self
             self._was_built = True
             duration = time() - start
-            if duration > 1.0:
+            if duration > 1.0 and DEBUG:
                 print(
                     f"build_self of {self.__class__.__name__} took:{duration} seconds"
                 )
@@ -84,39 +83,6 @@ class Buildable:
         """
         pass
 
-    def _tear_down(self):
-        """
-        # this is completely optional
-        recursively goes through graph in same order as build
-        how to handle multiple tear-down calls?
-
-        motivation: buildable as client that communicates with some worker, worker has alters its own state which is collected during tear-down
-        and worker is told to tear-down itself
-        """
-        self._tear_down_all_chrildren()
-        return self._tear_down_self()
-
-    def _tear_down_all_chrildren(self):
-        for f in fields(self):
-            if hasattr(
-                self, f.name
-            ):  # field initialized with field() -method without default do not exist! but are listed by fields!
-                obj = getattr(self, f.name)
-                if isinstance(obj, Buildable):
-                    # whoho! black-magic here! the child can overwrite itself and thereby shape-shift completely!
-                    setattr(self, f.name, obj._tear_down())
-
-    def _tear_down_self(self) -> Any:
-        """
-        # this is completely optional
-
-        override this if you want custom tear-down behavior
-        use shape-shifting here, to prevent tear-downs are triggered multiple times
-        shape-shifting: Dataclass -> dict , via: encode_dataclass(self)
-        """
-        self._was_teared_down = True
-        return self
-
 
 T = TypeVar("T")
 
@@ -126,7 +92,7 @@ class BuildableContainer(Generic[T], Buildable):
     data: T
 
     def _build_self(self):
-        print(f"triggered build for {self.__class__.__name__}")
+        # print(f"triggered build for {self.__class__.__name__}")
         if isinstance(self.data, (list, tuple)):
             g = (x for x in self.data)
         elif isinstance(self.data, dict):
@@ -207,7 +173,7 @@ class BuildableList(Buildable, list[T]):
     def _build_self(self):
         if DEBUG_MEMORY_LEAK:
             tracker.print_diff()
-        print(f"triggered build for {self.__class__.__name__}")
+            print(f"triggered build for {self.__class__.__name__}")
         for k, obj in enumerate(self):
             if isinstance(obj, Buildable):
                 self[k] = obj.build()

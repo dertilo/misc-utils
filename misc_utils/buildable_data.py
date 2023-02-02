@@ -83,8 +83,9 @@ class BuildableData(Buildable):
         raise NotImplementedError
 
     def _build_self(self) -> Any:
+        os.makedirs(str(self.data_dir), exist_ok=True)
         o = self._build_data()
-        # TODO: assert self._is_data_valid here??
+        assert self._is_data_valid
         return self if o is None else o
 
     @abstractmethod
