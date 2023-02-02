@@ -5,6 +5,7 @@ from typing import Optional, Callable
 
 from beartype import beartype
 
+from misc_utils.beartypes import Directory
 from misc_utils.processing_utils import exec_command
 
 
@@ -12,14 +13,12 @@ from misc_utils.processing_utils import exec_command
 def download_data(
     base_url: str,
     file_name: str,
-    data_dir: str,
+    data_dir: Directory,
     verbose: bool = False,
     unzip_it: bool = False,
     do_raise: bool = True,
     remove_zipped: bool = False,
 ) -> Optional[str]:
-    if not os.path.exists(data_dir):
-        os.makedirs(data_dir, exist_ok=True)
 
     url = base_url + "/" + file_name
     file = data_dir + "/" + file_name
