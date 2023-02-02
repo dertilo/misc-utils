@@ -36,7 +36,11 @@ CasedSlugStr = Annotated[NeStr, Is[is_cased_sluggy]]
 @dataclass
 class BuildableData(Buildable):
     """
-    use this for long-lived cache!
+    just some helper-methods / "convenience logic" like:
+        - defining a "data_dir" that consists of a "base_dir" and a folder-name (the "name"-property here)
+        - checking if data is valid (_is_data_valid) if so loading it (_load_data)
+        - reminding you to implement a "_is_data_valid"- and "_build_data" method
+
     """
 
     base_dir: PrefixSuffix = field(default_factory=lambda: BASE_PATHES["raw_data"])
@@ -83,7 +87,6 @@ class BuildableData(Buildable):
         raise NotImplementedError
 
     def _build_self(self) -> Any:
-        os.makedirs(str(self.data_dir), exist_ok=True)
         o = self._build_data()
         assert self._is_data_valid
         return self if o is None else o
