@@ -118,7 +118,7 @@ def instantiate_via_importlib(
 
 IDKEY = "_id_"
 CLASS_REF_KEY = "_target_"
-SPECIAL_KEYS = [IDKEY, CLASS_REF_KEY, "_cls_"]
+SPECIAL_KEYS = [IDKEY, CLASS_REF_KEY, "_cls_", "_was_built"]
 CLASS_REF_NO_INSTANTIATE = "_python_dataclass_"  # use this to prevent instantiate_via_importlib, if one wants class-reference for documentation purposes only
 UNSERIALIZABLE = "<UNSERIALIZABLE>"
 

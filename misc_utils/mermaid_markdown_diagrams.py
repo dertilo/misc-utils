@@ -1,8 +1,9 @@
+import dataclasses
 import json
 import uuid
 from dataclasses import dataclass
 from pprint import pprint
-from typing import Union, Any, Optional, Iterator
+from typing import Union, Any, Optional, Iterator, ClassVar
 
 from beartype import beartype
 
@@ -17,10 +18,11 @@ from misc_utils.dataclass_utils import (
     serialize_dataclass,
     encode_dataclass,
     _UNDEFINED,
+    SPECIAL_KEYS,
 )
 from misc_utils.prefix_suffix import PrefixSuffix
 
-classes_black_list = [
+CLASSES_BLACKLIST = [
     _CREATE_CACHE_DIR_IN_BASE_DIR.__name__,
     _IGNORE_THIS_USE_CACHE_DIR.__name__,
     _UNDEFINED.__name__,
@@ -33,13 +35,14 @@ class Node:
     id: str
     full_module_name: str
     params: Optional[Any] = None
+    display_params: ClassVar[bool] = True
 
     @property
     def class_name(self):
         return self.full_module_name.split(".")[-1]
 
     def __repr__(self):
-        if self.params is None:
+        if self.params is None or not self.display_params:
             text = self.class_name
         else:
             params_kv = (
@@ -54,35 +57,50 @@ class Node:
 
 
 @beartype
-def build_node(x: Any) -> tuple[Node, list[str]]:
-    if isinstance(x, dict):
-        d: dict[str, Any] = x
-        params = [
-            k
-            for k, v in d.items()
-            if "_target_" not in json.dumps(v) and k not in ["_target_", "_id_"]
-        ]
+def build_node(obj: Any, dc_only: bool = False) -> tuple[Optional[Node], list[str]]:
+    assert obj is not None
+    if isinstance(obj, dict):
+
+        def is_param(pp):
+            return isinstance(pp, (str, int, float))
+            # if isinstance(x,dict):
+            #     keys=set(x.keys())
+            #     is_a_param= len(set(SPECIAL_KEYS).intersection(keys))==0
+            # elif :
+
+        d: dict[str, Any] = obj
+        params = [k for k, v in d.items() if is_param(v) and k not in SPECIAL_KEYS]
         dependencies = [
-            k for k, v in d.items() if k not in params and k not in ["_target_", "_id_"]
+            k for k, v in d.items() if k not in params and k not in SPECIAL_KEYS
         ]
 
-        if "_target_" in x.keys():
+        if "_target_" in obj.keys():
             # node = Node(str(x["_id_"]), x["_target_"], params={k: d[k] for k in params})
-            node = Node(str(x["_id_"]), x["_target_"], params={})
+            node = Node(str(obj["_id_"]), obj["_target_"], params={})
         else:
-            node = Node(str(id(x)), "dict", params={k: d[k] for k in params})
+            if len(params) > 0 and not dc_only:
+                node = Node(
+                    str(id(obj)),
+                    "dict",
+                    params={k: d[k] for k in params},
+                )
+            else:
+                node = None
             # node = Node(str(id(x)), "dict", params={})
     else:
         # uuid cause I don't want builtin object to be concentrated in single node
-        node = Node(f"{uuid.uuid1()}", type(x).__name__, params=x)
+        node = Node(f"{uuid.uuid1()}", type(obj).__name__, params=obj)
         dependencies = []
     return node, dependencies
 
 
 @beartype
 def generate_mermaid_triples(
-    d: dict, set_of_triple_ids: Optional[list[str]] = None
+    d: dict,
+    set_of_triple_ids: Optional[list[str]] = None,
 ) -> Iterator[tuple[Node, str, Node]]:
+    dc_only = True
+
     if set_of_triple_ids is None:
         set_of_triple_ids = []
 
@@ -104,18 +122,26 @@ def generate_mermaid_triples(
                 "_id_": f"{uuid.uuid4()}",
             }
 
-    node_from, dependencies = build_node(d)
-    for k in dependencies:
-        v = d[k]
-        if (
-            isinstance(v, dict)
-            and v.get("_target_", "").split(".")[-1] in classes_black_list
-        ):
-            continue
-        node_to, _ = build_node(v)
+    node_from, dependencies = build_node(d, dc_only=dc_only)
+
+    def is_good_dep(couldbedep):
+        not_none = couldbedep is not None
+        blacklisted = (
+            isinstance(couldbedep, dict)
+            and couldbedep.get("_target_", "").split(".")[-1] in CLASSES_BLACKLIST
+        )
+        # is_dataclass = (
+        #     isinstance(couldbedep, dict) and "_target_" in couldbedep.keys()
+        #     or dataclasses.is_dataclass(couldbedep)
+        # )
+        return not_none and not blacklisted
+
+    good_deps = [(k, d[k]) for k in dependencies if is_good_dep(d[k])]
+    for k, v in good_deps:
+        node_to, _ = build_node(v, dc_only=dc_only)
         triple = node_from, k, node_to
         triple_id = "-".join([f"{x}" for x in triple])
-        if triple_id not in set_of_triple_ids:
+        if triple_id not in set_of_triple_ids and node_to is not None:
             yield triple
             set_of_triple_ids.append(triple_id)
             if isinstance(v, dict):

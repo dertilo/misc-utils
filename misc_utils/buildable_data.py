@@ -88,7 +88,9 @@ class BuildableData(Buildable):
 
     def _build_self(self) -> Any:
         o = self._build_data()
-        assert self._is_data_valid
+        assert (
+            self._is_data_valid
+        ), f"{self.__class__.__name__}: {self.name} failed to build data in {self.data_dir=}"
         return self if o is None else o
 
     @abstractmethod
