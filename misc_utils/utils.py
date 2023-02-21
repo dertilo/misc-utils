@@ -23,6 +23,7 @@ from typing import (
 )
 
 from beartype import beartype
+from misc_utils.beartypes import NeList
 
 T = TypeVar("T")
 T_default = TypeVar("T_default")
@@ -277,11 +278,9 @@ def retry(
 
 
 @beartype
-def format_table_cell(
-    v: Union[float, Any],
-) -> str:
+def format_table_cell(v: Union[float, Any], format: str = ".2f") -> str:
     if isinstance(v, float):
-        v = f"{v:.3f}"
+        v = f"{v:{format}}"
     if isinstance(v, _NOT_EXISTING):
         v = None
     return f"{v}"
@@ -305,9 +304,9 @@ def build_markdown_table(
 
 @beartype
 def build_markdown_table_from_dicts(
-    dicts: list[dict],
+    dicts: NeList[dict],
     col_title: Optional[str] = None,
-    col_names: Optional[list[str]] = None,
+    col_names: Optional[NeList[str]] = None,
     format_fun: Callable[[Any], str] = format_table_cell,
 ) -> str:
     if col_names is None:
