@@ -290,8 +290,8 @@ def format_table_cell(v: Union[float, Any], format: str = ".2f") -> str:
 class TableHeaders:
     row_title: NeStr
     col_title: NeStr
-    row_names: NeList[NeList]
-    col_names: NeList[NeList]
+    row_names: NeList[NeStr]
+    col_names: NeList[NeStr]
 
 
 @beartype
