@@ -7,7 +7,9 @@ from beartype.door import die_if_unbearable
 from beartype.roar import BeartypeCallException
 from beartype.vale import IsAttr, IsEqual, Is
 
-File = Annotated[str, Is[lambda f: os.path.isfile(f)]]
+File = Annotated[
+    str, Is[lambda f: os.path.isfile(f) or os.path.isfile(f"{os.getcwd()}/{f}")]
+]
 Directory = Annotated[str, Is[lambda f: os.path.isdir(f)]]
 # -------------------------------------------------------------------------------------
 # ----              NUMPY TYPES

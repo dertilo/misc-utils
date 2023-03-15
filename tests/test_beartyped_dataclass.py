@@ -5,6 +5,7 @@ from typing import Annotated, List, Optional
 
 import pytest
 from beartype import beartype
+from beartype.door import is_bearable
 from beartype.roar import BeartypeCallHintPepParamException
 from beartype.vale import IsAttr, IsEqual, Is
 
@@ -69,6 +70,7 @@ def test_WantsALenghlyString():
 
     _ = WantsALenghlyString(lenghtly_string=valid_string)
 
+    assert not is_bearable(invalid_string,LengthyString)
     assert bear_does_roar(lambda: WantsALenghlyString(lenghtly_string=invalid_string))
 
 

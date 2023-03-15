@@ -409,7 +409,7 @@ def to_dict(o) -> Dict:
     # return dataclasses.asdict(
     #     o, dict_factory=lambda x: {k: v for k, v in x if serialize_field(k, v)}
     # )
-    return encode_dataclass(o, skip_keys=SPECIAL_KEYS)  # TODO: +["_was_built"]
+    return encode_dataclass(o, skip_keys=SPECIAL_KEYS)
 
 
 @beartype
