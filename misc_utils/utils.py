@@ -23,7 +23,7 @@ from typing import (
 )
 
 from beartype import beartype
-from misc_utils.beartypes import NeList
+from misc_utils.beartypes import NeList, NeStr
 
 T = TypeVar("T")
 T_default = TypeVar("T_default")
@@ -286,19 +286,25 @@ def format_table_cell(v: Union[float, Any], format: str = ".2f") -> str:
     return f"{v}"
 
 
+@dataclass
+class TableHeaders:
+    row_title: NeStr
+    col_title: NeStr
+    row_names: NeList[NeList]
+    col_names: NeList[NeList]
+
+
 @beartype
 def build_markdown_table(
     rows: list[list[Union[float, Any]]],
-    row_name: str,
-    col_name: str,
-    row_names: list[str],
-    col_names: list[str],
+    table_headers: TableHeaders,
     format_fun: Callable[[Any], str] = format_table_cell,
 ) -> str:
+    th = table_headers
     rows_s = [[format_fun(v) for v in r] for r in rows]
-    header = " | ".join([f"{row_name} \ {col_name}"] + col_names)
-    line = " | ".join(["---" for _ in range(len(col_names) + 1)])
-    rows = [" | ".join([name] + cols) for name, cols in zip(row_names, rows_s)]
+    header = " | ".join([f"{th.row_title} \ {th.col_title}"] + th.col_names)
+    line = " | ".join(["---" for _ in range(len(th.col_names) + 1)])
+    rows = [" | ".join([name] + cols) for name, cols in zip(th.row_names, rows_s)]
     return "\n".join([header, line] + rows)
 
 
