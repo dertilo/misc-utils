@@ -69,11 +69,12 @@ class BuildableData(Buildable):
     def _is_ready(self) -> bool:
         is_valid = self._is_data_valid
         if is_valid:
-            self._load_data()
+            self._load_data() # TODO: this is not really explicit!
         return is_valid
 
     def _load_data(self):
         """
+        TODO: this gets called in _is_ready!!
         if you want this to be run "always" also after _build_data do call it there yourself!
         """
         pass

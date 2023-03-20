@@ -296,7 +296,7 @@ class TableHeaders:
 
 @beartype
 def build_markdown_table(
-    rows: list[list[Union[float, Any]]],
+    rows: list[list[Any]],
     table_headers: TableHeaders,
     format_fun: Callable[[Any], str] = format_table_cell,
 ) -> str:

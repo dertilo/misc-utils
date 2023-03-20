@@ -15,24 +15,25 @@ from beartype import beartype
 
 
 def beartype_all_dataclasses_of_this_files_parent(file: str):
-    module_dir = str(pathlib.Path(file).parent.resolve())
+    package_dir = str(pathlib.Path(file).parent.resolve())
 
     already_contained = any(
-        (module_dir.startswith(s) for s in BEARTYPED_DATACLASS_PREFIXES)
+        (package_dir.startswith(s) for s in BEARTYPED_DATACLASS_PREFIXES)
     )
     if not already_contained:
-        BEARTYPED_DATACLASS_PREFIXES.add(module_dir)
+        BEARTYPED_DATACLASS_PREFIXES.add(package_dir)
 
+    # maybe remove children/prefixes (subdirectories)
     children = [
         p
         for p in BEARTYPED_DATACLASS_PREFIXES
-        if p.startswith(module_dir) and p != module_dir
+        if p.startswith(package_dir) and p != package_dir
     ]
     is_parent = len(children) > 0
     if is_parent:
         for ch in children:
             BEARTYPED_DATACLASS_PREFIXES.remove(ch)
-        BEARTYPED_DATACLASS_PREFIXES.add(module_dir)
+        BEARTYPED_DATACLASS_PREFIXES.add(package_dir)
 
 
 # def beartype_all_dataclasses_in_this_dir_prefix(prefix: str):
