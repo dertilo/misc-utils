@@ -68,16 +68,28 @@ class BuildableData(Buildable):
     @property
     def _is_ready(self) -> bool:
         is_valid = self._is_data_valid
-        if is_valid:
-            self._load_data() # TODO: this is not really explicit!
+        # if is_valid: # TODO: no loading here! but think  about it, hopefully this does not break things elsewhere!
+        #     self._load_data() # this is not really explicit!
         return is_valid
 
-    def _load_data(self):
+    def __enter__(self):
         """
-        TODO: this gets called in _is_ready!!
-        if you want this to be run "always" also after _build_data do call it there yourself!
+        use to load the model into memory, prepare things
         """
         pass
+
+    def __exit__(self, exc_type=None, exc_val=None, exc_tb=None):
+        """
+        use as tear-down, to free memory, unload model
+        """
+        pass
+
+    # def _load_data(self):
+    #     """
+    #     TODO: this gets called in _is_ready!!
+    #     if you want this to be run "always" also after _build_data do call it there yourself!
+    #     """
+    #     pass
 
     @property
     @abstractmethod

@@ -16,7 +16,7 @@ if DEBUG_MEMORY_LEAK:
     print(f"DEBUGGING MODE in {__name__}")
 
 
-@dataclass
+@dataclass # TODO: remove dataclass here to allow frozen=True in downstream/inheriting
 class Buildable:
     """
     base-class for "buildable Dataclasses"
