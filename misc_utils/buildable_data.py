@@ -8,15 +8,14 @@ from beartype.vale import Is
 from slugify import slugify
 
 from data_io.readwrite_files import read_jsonl, write_jsonl
-from misc_utils.beartypes import Dataclass, NeStr
+from misc_utils.beartypes import NeStr
 from misc_utils.buildable import Buildable
-from misc_utils.dataclass_utils import UNDEFINED
 from misc_utils.prefix_suffix import PrefixSuffix, BASE_PATHES
+from misc_utils.utils import slugify_with_underscores
 
 
 def is_sluggy(s: NeStr) -> bool:
-    regex_pattern_to_allow_underscores = r"[^-a-z0-9_]+"
-    return slugify(s, regex_pattern=regex_pattern_to_allow_underscores) == s
+    return slugify_with_underscores(s) == s
 
 
 SlugStr = Annotated[NeStr, Is[is_sluggy]]

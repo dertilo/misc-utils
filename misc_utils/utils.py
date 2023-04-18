@@ -23,6 +23,8 @@ from typing import (
 )
 
 from beartype import beartype
+from slugify import slugify
+
 from misc_utils.beartypes import NeList, NeStr
 
 T = TypeVar("T")
@@ -436,5 +438,10 @@ def get_valid_filename(name):
     s = str(name).strip().replace(" ", "_")
     s = re.sub(r"(?u)[^-\w.]", "", s)
     if s in {"", ".", ".."}:
-        raise SuspiciousFileOperation("Could not derive file name from '%s'" % name)
+        raise RuntimeError("Could not derive file name from '%s'" % name)
     return s
+
+
+def slugify_with_underscores(s:str)->str:
+    regex_pattern_to_allow_underscores = r"[^-a-z0-9_]+"
+    return slugify(s, regex_pattern=regex_pattern_to_allow_underscores)
