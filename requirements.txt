@@ -1,3 +1,4 @@
+python-slugify
 beartype
 # filelock # could be extra
 # numpy # could be extra

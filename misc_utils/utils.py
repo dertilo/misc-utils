@@ -442,6 +442,6 @@ def get_valid_filename(name):
     return s
 
 
-def slugify_with_underscores(s:str)->str:
+def slugify_with_underscores(s: str) -> str:
     regex_pattern_to_allow_underscores = r"[^-a-z0-9_]+"
     return slugify(s, regex_pattern=regex_pattern_to_allow_underscores)

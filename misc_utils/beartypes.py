@@ -71,6 +71,8 @@ NeList = Annotated[list[T], Is[lambda lst: len(lst) > 0]]
 NeDict = Annotated[dict[T, T2], Is[lambda d: len(d.keys()) > 0]]
 # NotNone = Annotated[Any, Is[lambda x:x is None]] # TODO: not working!
 
+
+
 # -------------------------------------------------------------------------------------
 # ----              TORCH TYPES
 # -------------------------------------------------------------------------------------

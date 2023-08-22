@@ -528,7 +528,6 @@ def all_undefined_must_be_filled(obj, extra_field_names: Optional[list[str]] = N
             )
 
 
-@dataclass
 class FillUndefined:
     def __post_init__(self):
         all_undefined_must_be_filled(self)
